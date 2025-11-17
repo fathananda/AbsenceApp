@@ -1,50 +1,15 @@
 package com.fathi.absenceapp
 
 import android.Manifest
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Paid
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DividerDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -58,12 +23,7 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.Circle
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -84,8 +44,6 @@ fun HomeScreen(
     var currentLocation by remember { mutableStateOf(LatLng(-6.200000, 106.816666)) }
     var jamMasuk by remember { mutableStateOf(absensiViewModel.getCurrentTime()) }
     var showJamDialog by remember { mutableStateOf(false) }
-
-    // NEW: State untuk info jarak
     var jarakDariKantor by remember { mutableStateOf<Double?>(null) }
     var lokasiValid by remember { mutableStateOf(true) }
 
@@ -112,7 +70,6 @@ fun HomeScreen(
                         currentLocation = LatLng(location.latitude, location.longitude)
                         cameraPositionState.position = CameraPosition.fromLatLngZoom(currentLocation, 15f)
 
-                        // Hitung jarak
                         val jarak = absensiViewModel.hitungJarak(
                             location.latitude, location.longitude,
                             konfigurasiState.kantorLatitude, konfigurasiState.kantorLongitude
@@ -131,12 +88,10 @@ fun HomeScreen(
     LaunchedEffect(absensiState) {
         if (absensiState is AbsensiState.Success) {
             kotlinx.coroutines.delay(5000)
-            // Cek ulang apakah sudah absen hari ini
             absensiViewModel.cekAbsenHariIni()
         }
     }
 
-    // Dialog untuk input jam masuk
     if (showJamDialog) {
         JamMasukDialog(
             jamMasuk = jamMasuk,
@@ -259,28 +214,18 @@ fun HomeScreen(
                 cameraPositionState = cameraPositionState,
                 properties = MapProperties(isMyLocationEnabled = locationPermissionState.allPermissionsGranted)
             ) {
-                // Marker lokasi user
                 if (locationPermissionState.allPermissionsGranted) {
                     val markerState = remember { MarkerState(position = currentLocation) }
-
-                    Marker(
-                        state = markerState,
-                        title = "Lokasi Anda"
-                    )
+                    Marker(state = markerState, title = "Lokasi Anda")
                 }
 
-                // Marker lokasi kantor
-                val kantorMarkerState = remember {
-                    MarkerState(position = kantorLocation)
-                }
-
+                val kantorMarkerState = remember { MarkerState(position = kantorLocation) }
                 Marker(
                     state = kantorMarkerState,
                     title = konfigurasiState.kantorNama,
                     snippet = "Lokasi Kantor"
                 )
 
-                // Circle radius
                 Circle(
                     center = kantorLocation,
                     radius = konfigurasiState.radiusMaksimal,
@@ -355,7 +300,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tombol Absen
+            // BAGIAN TOMBOL ABSEN - YANG DIPERBAIKI
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -378,6 +323,8 @@ fun HomeScreen(
                         is AbsensiState.Loading -> {
                             CircularProgressIndicator()
                         }
+
+                        // PERBAIKAN: Tampilkan card info tanpa tombol
                         is AbsensiState.AlreadyAbsen -> {
                             val data = (absensiState as AbsensiState.AlreadyAbsen).data
                             Card(
@@ -397,11 +344,7 @@ fun HomeScreen(
                                         textAlign = TextAlign.Center
                                     )
                                     Spacer(modifier = Modifier.height(12.dp))
-                                    HorizontalDivider(
-                                        Modifier,
-                                        DividerDefaults.Thickness,
-                                        DividerDefaults.color
-                                    )
+                                    HorizontalDivider()
                                     Spacer(modifier = Modifier.height(12.dp))
 
                                     InfoRow("Jam Seharusnya", data.jamSeharusnya ?: "-")
@@ -414,6 +357,7 @@ fun HomeScreen(
                                 }
                             }
                         }
+
                         is AbsensiState.Success -> {
                             val successState = absensiState as AbsensiState.Success
                             Card(
@@ -435,11 +379,7 @@ fun HomeScreen(
 
                                     successState.data?.let { data ->
                                         Spacer(modifier = Modifier.height(12.dp))
-                                        HorizontalDivider(
-                                            Modifier,
-                                            DividerDefaults.Thickness,
-                                            DividerDefaults.color
-                                        )
+                                        HorizontalDivider()
                                         Spacer(modifier = Modifier.height(12.dp))
 
                                         InfoRow("Jam Seharusnya", data.jamSeharusnya ?: "-")
@@ -451,7 +391,9 @@ fun HomeScreen(
                                     }
                                 }
                             }
+                            // TIDAK ADA TOMBOL DI SINI JUGA
                         }
+
                         is AbsensiState.Error -> {
                             Text(
                                 text = (absensiState as AbsensiState.Error).message,
@@ -471,6 +413,8 @@ fun HomeScreen(
                                 Text("Coba Lagi")
                             }
                         }
+
+                        // HANYA TAMPILKAN TOMBOL SAAT Idle
                         else -> {
                             Button(
                                 onClick = {
@@ -549,7 +493,6 @@ fun JamMasukDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Info lokasi
                 if (jarak != null) {
                     Surface(
                         shape = MaterialTheme.shapes.small,
@@ -628,8 +571,7 @@ fun MenuCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .height(100.dp),
+        modifier = modifier.height(100.dp),
         onClick = onClick,
         colors = CardDefaults.cardColors(
             containerColor = color.copy(alpha = 0.1f)

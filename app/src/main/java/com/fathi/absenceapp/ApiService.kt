@@ -248,7 +248,7 @@ interface ApiService {
         @Part("tanggal_mulai") tanggalMulai: RequestBody,
         @Part("tanggal_selesai") tanggalSelesai: RequestBody,
         @Part("keterangan") keterangan: RequestBody?,
-        @Part ("foto_bukti")fotoBukti: MultipartBody.Part?
+        @Part fotoBukti: MultipartBody.Part?
     ): Response<ApiResponse<PengajuanData>>
 
     @GET("pengajuan")

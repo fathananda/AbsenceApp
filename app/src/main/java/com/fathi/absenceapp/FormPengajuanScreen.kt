@@ -128,8 +128,14 @@ class FormPengajuanViewModel(application: Application) : AndroidViewModel(applic
                 if (fotoBuktiUri != null) {
                     val file = getFileFromUri(context, fotoBuktiUri)
                     if (file != null) {
-                        val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
-                        fotoPart = MultipartBody.Part.createFormData("foto_bukti", file.name, requestFile)
+                        val mimeType = context.contentResolver.getType(fotoBuktiUri)
+
+                        val requestFile = file.asRequestBody(mimeType?.toMediaTypeOrNull())
+                        fotoPart = MultipartBody.Part.createFormData(
+                            "foto_bukti",
+                            file.name,
+                            requestFile
+                        )
                     }
                 }
 
@@ -159,7 +165,7 @@ class FormPengajuanViewModel(application: Application) : AndroidViewModel(applic
             val inputStream = context.contentResolver.openInputStream(uri) ?: return null
 
             // Get file name
-            var fileName = "photo_${System.currentTimeMillis()}.jpg"
+            var fileName = "upload_${System.currentTimeMillis()}"
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                 val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 if (cursor.moveToFirst() && nameIndex >= 0) {
@@ -192,7 +198,7 @@ fun FormPengajuanScreen(
     onNavigateBack: () -> Unit,
     viewModel: FormPengajuanViewModel = viewModel()
 ) {
-    val context = LocalContext.current
+    LocalContext.current
     val formState by viewModel.formState.collectAsState()
     val userId by viewModel.userId.collectAsState(initial = null)
 
