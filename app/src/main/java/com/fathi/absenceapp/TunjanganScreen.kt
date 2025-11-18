@@ -17,6 +17,14 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
 import android.app.Application
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -29,7 +37,6 @@ import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.*
 
-// ViewModel
 sealed class TunjanganState {
     object Idle : TunjanganState()
     object Loading : TunjanganState()
@@ -100,7 +107,6 @@ class TunjanganViewModel(application: Application) : AndroidViewModel(applicatio
     }
 }
 
-// Screen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TunjanganScreen(
@@ -141,14 +147,22 @@ fun TunjanganScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Laporan Gaji") },
+                title = {
+                    Text(
+                        "Laporan Gaji",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showRingkasan = !showRingkasan }) {
+                    FilledTonalIconButton(
+                        onClick = { showRingkasan = !showRingkasan }
+                    ) {
                         Icon(
                             if (showRingkasan) Icons.Default.CalendarMonth else Icons.Default.Assessment,
                             contentDescription = if (showRingkasan) "Detail" else "Ringkasan"
@@ -156,148 +170,41 @@ fun TunjanganScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
     ) { padding ->
-        if (showRingkasan) {
-            // Tampilan Ringkasan 3 Bulan
-            when (val state = ringkasanState) {
-                is RingkasanState.Loading -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is RingkasanState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        item {
-                            Text(
-                                text = "Ringkasan 3 Bulan Terakhir",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        items(state.data) { data ->
-                            RingkasanCard(data)
-                        }
-                    }
-                }
-                is RingkasanState.Error -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { userId?.let { viewModel.loadRingkasan(it) } }) {
-                                Text("Coba Lagi")
-                            }
-                        }
-                    }
-                }
-                else -> {}
-            }
-        } else {
-            // Tampilan Detail Bulanan
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                // Month/Year Selector
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = {
-                                if (selectedMonth == 1) {
-                                    selectedMonth = 12
-                                    selectedYear -= 1
-                                } else {
-                                    selectedMonth -= 1
-                                }
-                            }
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous")
-                        }
-
-                        Text(
-                            text = "${namaBulan[selectedMonth - 1]} $selectedYear",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        IconButton(
-                            onClick = {
-                                if (selectedMonth == 12) {
-                                    selectedMonth = 1
-                                    selectedYear += 1
-                                } else {
-                                    selectedMonth += 1
-                                }
-                            }
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next")
-                        }
-                    }
-                }
-
-                when (val state = tunjanganState) {
-                    is TunjanganState.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                    is TunjanganState.Success -> {
-                        DetailTunjanganContent(state.data)
-                    }
-                    is TunjanganState.Error -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = {
-                                    userId?.let {
-                                        viewModel.loadTunjangan(it, selectedMonth, selectedYear)
-                                    }
-                                }) {
-                                    Text("Coba Lagi")
-                                }
-                            }
-                        }
-                    }
-                    else -> {}
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+        ) {
+            AnimatedContent(
+                targetState = showRingkasan,
+                transitionSpec = {
+                    fadeIn() + slideInVertically() togetherWith
+                            fadeOut() + slideOutVertically()
+                },
+                label = "view_switch"
+            ) { isRingkasan ->
+                if (isRingkasan) {
+                    RingkasanView(ringkasanState, userId, viewModel)
+                } else {
+                    DetailView(
+                        tunjanganState,
+                        selectedMonth,
+                        selectedYear,
+                        namaBulan,
+                        onMonthChange = { m, y ->
+                            selectedMonth = m
+                            selectedYear = y
+                        },
+                        userId,
+                        viewModel
+                    )
                 }
             }
         }
@@ -305,22 +212,211 @@ fun TunjanganScreen(
 }
 
 @Composable
-fun DetailTunjanganContent(data: TunjanganData) {
+private fun RingkasanView(
+    state: RingkasanState,
+    userId: Int?,
+    viewModel: TunjanganViewModel
+) {
+    when (state) {
+        is RingkasanState.Loading -> {
+            LoadingState()
+        }
+        is RingkasanState.Success -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    Text(
+                        text = "Ringkasan 3 Bulan",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+
+                items(state.data) { data ->
+                    RingkasanCardModern(data)
+                }
+            }
+        }
+        is RingkasanState.Error -> {
+            ErrorState(state.message) {
+                userId?.let { viewModel.loadRingkasan(it) }
+            }
+        }
+        else -> {}
+    }
+}
+
+@Composable
+private fun DetailView(
+    state: TunjanganState,
+    month: Int,
+    year: Int,
+    monthNames: List<String>,
+    onMonthChange: (Int, Int) -> Unit,
+    userId: Int?,
+    viewModel: TunjanganViewModel
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Month Selector
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            tonalElevation = 2.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {
+                        val (newMonth, newYear) = if (month == 1) {
+                            12 to year - 1
+                        } else {
+                            month - 1 to year
+                        }
+                        onMonthChange(newMonth, newYear)
+                    }
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "Bulan Sebelumnya",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = monthNames[month - 1],
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = year.toString(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        val (newMonth, newYear) = if (month == 12) {
+                            1 to year + 1
+                        } else {
+                            month + 1 to year
+                        }
+                        onMonthChange(newMonth, newYear)
+                    }
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Bulan Berikutnya",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+        }
+
+        when (state) {
+            is TunjanganState.Loading -> {
+                LoadingState()
+            }
+            is TunjanganState.Success -> {
+                DetailTunjanganModern(state.data)
+            }
+            is TunjanganState.Error -> {
+                ErrorState(state.message) {
+                    userId?.let {
+                        viewModel.loadTunjangan(it, month, year)
+                    }
+                }
+            }
+            else -> {}
+        }
+    }
+}
+
+@Composable
+private fun LoadingState() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(48.dp),
+                strokeWidth = 4.dp
+            )
+            Text(
+                text = "Memuat data...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ErrorState(message: String, onRetry: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                Icons.Default.ErrorOutline,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.error
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            FilledTonalButton(onClick = onRetry) {
+                Icon(Icons.Default.Refresh, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Coba Lagi")
+            }
+        }
+    }
+}
+
+@Composable
+fun DetailTunjanganModern(data: TunjanganData) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        // Gaji Pokok
-        SectionCard(
-            title = "GAJI POKOK",
+        SectionCardModern(
+            title = "Gaji Pokok",
             icon = Icons.Default.AccountBalanceWallet,
-            color = Color(0xFF2196F3)
+            iconColor = Color(0xFF2196F3)
         ) {
             Text(
                 text = formatRupiah(data.gajiPokok),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1976D2)
             )
@@ -328,108 +424,109 @@ fun DetailTunjanganContent(data: TunjanganData) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Kehadiran
-        SectionCard(
-            title = "KEHADIRAN",
-            subtitle = "dari ${data.kehadiran.totalHariKerja} hari kerja",
+        SectionCardModern(
+            title = "Kehadiran",
+            subtitle = "${data.kehadiran.hadir} dari ${data.kehadiran.totalHariKerja} hari kerja",
             icon = Icons.Default.CalendarMonth,
-            color = Color(0xFF4CAF50)
+            iconColor = Color(0xFF4CAF50)
         ) {
-            KehadiranGrid(data.kehadiran)
+            KehadiranGridModern(data.kehadiran)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tunjangan
-        SectionCard(
-            title = "TUNJANGAN",
+        SectionCardModern(
+            title = "Tunjangan",
+            subtitle = data.tunjangan.detail,
             icon = Icons.Default.Add,
-            color = Color(0xFF4CAF50)
+            iconColor = Color(0xFF4CAF50)
         ) {
-            Column {
-                Text(
-                    text = "Tunjangan Hadir",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = data.tunjangan.detail,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = formatRupiah(data.tunjangan.tunjanganHadir),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4CAF50)
-                )
-            }
+            Text(
+                text = formatRupiah(data.tunjangan.tunjanganHadir),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF4CAF50)
+            )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Potongan
         if (data.potongan.total > 0) {
-            SectionCard(
-                title = "POTONGAN",
+            Spacer(modifier = Modifier.height(16.dp))
+            SectionCardModern(
+                title = "Potongan",
                 icon = Icons.Default.Remove,
-                color = Color(0xFFF44336)
+                iconColor = Color(0xFFEF5350)
             ) {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     data.potongan.detail.forEach { detail ->
-                        Text(
-                            text = "• $detail",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Circle,
+                                null,
+                                Modifier.size(6.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = detail,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = formatRupiah(data.potongan.total),
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFF44336)
+                        color = Color(0xFFEF5350)
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Gaji Bersih
-        Card(
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            tonalElevation = 4.dp
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Paid,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Paid,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
                     Text(
                         text = "GAJI BERSIH",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = formatRupiah(data.gajiBersih),
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -441,43 +538,48 @@ fun DetailTunjanganContent(data: TunjanganData) {
 }
 
 @Composable
-fun SectionCard(
+fun SectionCardModern(
     title: String,
     subtitle: String? = null,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color,
+    iconColor: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(20.dp)
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = color.copy(alpha = 0.1f)
+                    shape = RoundedCornerShape(14.dp),
+                    color = iconColor.copy(alpha = 0.15f),
+                    modifier = Modifier.size(44.dp)
                 ) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .size(24.dp)
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            tint = iconColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
                     if (subtitle != null) {
                         Text(
@@ -488,45 +590,36 @@ fun SectionCard(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             content()
         }
     }
 }
 
 @Composable
-fun KehadiranGrid(kehadiran: KehadiranDetail) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        KehadiranRow("Hadir", kehadiran.hadir.toString(), Color(0xFF2196F3))
-        KehadiranRow("✓ Tepat Waktu", kehadiran.tepatWaktu.toString(), Color(0xFF4CAF50))
-        if (kehadiran.telatRingan > 0) {
-            KehadiranRow("⚠ Telat Ringan", kehadiran.telatRingan.toString(), Color(0xFFFF9800))
-        }
-        if (kehadiran.telatSedang > 0) {
-            KehadiranRow("⚠ Telat Sedang", kehadiran.telatSedang.toString(), Color(0xFFFF5722))
-        }
-        if (kehadiran.telatBerat > 0) {
-            KehadiranRow("⚠ Telat Berat", kehadiran.telatBerat.toString(), Color(0xFFF44336))
-        }
-        if (kehadiran.izin > 0) {
-            KehadiranRow("ℹ Izin", kehadiran.izin.toString(), Color(0xFF9C27B0))
-        }
-        if (kehadiran.sakit > 0) {
-            KehadiranRow("ℹ Sakit", kehadiran.sakit.toString(), Color(0xFF9C27B0))
-        }
-        if (kehadiran.dinas > 0) {
-            KehadiranRow("ℹ Dinas", kehadiran.dinas.toString(), Color(0xFF9C27B0))
-        }
-        if (kehadiran.alpa > 0) {
-            KehadiranRow("✗ Alpa", kehadiran.alpa.toString(), Color(0xFFF44336))
-        }
+fun KehadiranGridModern(kehadiran: KehadiranDetail) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        KehadiranRowModern("Hadir", kehadiran.hadir, Color(0xFF2196F3))
+        KehadiranRowModern("Tepat Waktu", kehadiran.tepatWaktu, Color(0xFF4CAF50))
+        if (kehadiran.telatRingan > 0)
+            KehadiranRowModern("Telat Ringan", kehadiran.telatRingan, Color(0xFFFF9800))
+        if (kehadiran.telatSedang > 0)
+            KehadiranRowModern("Telat Sedang", kehadiran.telatSedang, Color(0xFFFF5722))
+        if (kehadiran.telatBerat > 0)
+            KehadiranRowModern("Telat Berat", kehadiran.telatBerat, Color(0xFFEF5350))
+        if (kehadiran.izin > 0)
+            KehadiranRowModern("Izin", kehadiran.izin, Color(0xFF9C27B0))
+        if (kehadiran.sakit > 0)
+            KehadiranRowModern("Sakit", kehadiran.sakit, Color(0xFF9C27B0))
+        if (kehadiran.dinas > 0)
+            KehadiranRowModern("Dinas", kehadiran.dinas, Color(0xFF9C27B0))
+        if (kehadiran.alpa > 0)
+            KehadiranRowModern("Alpa", kehadiran.alpa, Color(0xFFEF5350))
     }
 }
 
 @Composable
-fun KehadiranRow(label: String, value: String, color: Color) {
+fun KehadiranRowModern(label: String, value: Int, color: Color) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -537,14 +630,14 @@ fun KehadiranRow(label: String, value: String, color: Color) {
             style = MaterialTheme.typography.bodyMedium
         )
         Surface(
-            shape = MaterialTheme.shapes.small,
-            color = color.copy(alpha = 0.1f)
+            shape = RoundedCornerShape(12.dp),
+            color = color.copy(alpha = 0.15f)
         ) {
             Text(
                 text = "$value hari",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = color
             )
         }
@@ -552,19 +645,23 @@ fun KehadiranRow(label: String, value: String, color: Color) {
 }
 
 @Composable
-fun RingkasanCard(data: TunjanganData) {
+fun RingkasanCardModern(data: TunjanganData) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(20.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 Column {
                     Text(
@@ -578,75 +675,36 @@ fun RingkasanCard(data: TunjanganData) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Icon(
-                    Icons.Default.CalendarMonth,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "Gaji Pokok",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = formatRupiah(data.gajiPokok),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "Tunjangan",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF4CAF50)
-                    )
-                    Text(
-                        text = "+ ${formatRupiah(data.totalTunjangan)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF4CAF50)
-                    )
-                }
-            }
-
-            if (data.totalPotongan > 0) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    modifier = Modifier.size(48.dp)
                 ) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "Potongan",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFF44336)
-                        )
-                        Text(
-                            text = "- ${formatRupiah(data.totalPotongan)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFFF44336)
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SalaryRow("Gaji Pokok", formatRupiah(data.gajiPokok))
+            Spacer(Modifier.height(12.dp))
+            SalaryRow("Tunjangan", "+ ${formatRupiah(data.totalTunjangan)}", Color(0xFF4CAF50))
+            if (data.totalPotongan > 0) {
+                Spacer(Modifier.height(12.dp))
+                SalaryRow("Potongan", "- ${formatRupiah(data.totalPotongan)}", Color(0xFFEF5350))
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(modifier = Modifier.height(20.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -660,12 +718,32 @@ fun RingkasanCard(data: TunjanganData) {
                 )
                 Text(
                     text = formatRupiah(data.gajiBersih),
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SalaryRow(label: String, value: String, valueColor: Color = MaterialTheme.colorScheme.onSurface) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = valueColor
+        )
     }
 }
 

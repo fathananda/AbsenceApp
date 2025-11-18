@@ -1,6 +1,11 @@
 package com.fathi.absenceapp
 
 import android.Manifest
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -24,6 +30,8 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import java.util.Locale
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -60,7 +68,6 @@ fun HomeScreen(
         position = CameraPosition.fromLatLngZoom(currentLocation, 15f)
     }
 
-    // Update lokasi dan hitung jarak
     LaunchedEffect(locationPermissionState.allPermissionsGranted) {
         if (locationPermissionState.allPermissionsGranted) {
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
@@ -84,7 +91,6 @@ fun HomeScreen(
         }
     }
 
-    // Reset state setelah sukses
     LaunchedEffect(absensiState) {
         if (absensiState is AbsensiState.Success) {
             kotlinx.coroutines.delay(5000)
@@ -111,7 +117,12 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Absensi Mahasiswa") },
+                title = {
+                    Text(
+                        "Absensi Guru",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 actions = {
                     IconButton(onClick = {
                         authViewModel.logout()
@@ -120,8 +131,9 @@ fun HomeScreen(
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, "Logout")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface
                 )
             )
         }
@@ -131,130 +143,213 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
+                .padding(bottom = 16.dp)
         ) {
-            // Card Info Mahasiswa
-            Card(
+            ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 8.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Selamat Datang!",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = userName ?: "Mahasiswa",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Jam Masuk: ${konfigurasiState.jamMasukDefault}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = konfigurasiState.kantorNama,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Card Info Jarak
-            if (jarakDariKantor != null) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (lokasiValid) {
-                            Color(0xFFE8F5E9)
-                        } else {
-                            Color(0xFFFFEBEE)
-                        }
-                    )
+                    modifier = Modifier.padding(20.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = if (lokasiValid) Color(0xFF4CAF50) else Color(0xFFF44336)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            modifier = Modifier.size(48.dp),
+                            shape = MaterialTheme.shapes.medium,
+                            color = MaterialTheme.colorScheme.primary
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(
-                                text = if (lokasiValid) "✓ Lokasi Valid" else "✗ Lokasi Tidak Valid",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (lokasiValid) Color(0xFF2E7D32) else Color(0xFFC62828)
+                                text = "Selamat Datang!",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = "Jarak: ${jarakDariKantor!!.toInt()}m dari kantor (maks: ${konfigurasiState.radiusMaksimal.toInt()}m)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (lokasiValid) Color(0xFF388E3C) else Color(0xFFD32F2F)
+                                text = userName?.takeIf { it.isNotBlank() } ?: "Guru",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        InfoChip(
+                            icon = Icons.Default.AccessTime,
+                            label = "Jam Masuk",
+                            value = konfigurasiState.jamMasukDefault
+                        )
+                        InfoChip(
+                            icon = Icons.Default.LocationOn,
+                            label = "Lokasi",
+                            value = konfigurasiState.kantorNama
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            // Google Maps
-            GoogleMap(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp)
-                    .padding(horizontal = 16.dp),
-                cameraPositionState = cameraPositionState,
-                properties = MapProperties(isMyLocationEnabled = locationPermissionState.allPermissionsGranted)
-            ) {
-                if (locationPermissionState.allPermissionsGranted) {
-                    val markerState = remember { MarkerState(position = currentLocation) }
-                    Marker(state = markerState, title = "Lokasi Anda")
-                }
-
-                val kantorMarkerState = remember { MarkerState(position = kantorLocation) }
-                Marker(
-                    state = kantorMarkerState,
-                    title = konfigurasiState.kantorNama,
-                    snippet = "Lokasi Kantor"
-                )
-
-                Circle(
-                    center = kantorLocation,
-                    radius = konfigurasiState.radiusMaksimal,
-                    strokeColor = Color(0xFF2196F3),
-                    strokeWidth = 2f,
-                    fillColor = Color(0x220288D1)
-                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Menu Cards
+            AnimatedVisibility(
+                visible = jarakDariKantor != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                jarakDariKantor?.let { jarak ->
+                    ElevatedCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = if (lokasiValid) {
+                                MaterialTheme.colorScheme.tertiaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.errorContainer
+                            }
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                if (lokasiValid) Icons.Default.CheckCircle else Icons.Default.Error,
+                                contentDescription = null,
+                                tint = if (lokasiValid) {
+                                    MaterialTheme.colorScheme.onTertiaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                },
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (lokasiValid) "Lokasi Valid" else "Lokasi Tidak Valid",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (lokasiValid) {
+                                        MaterialTheme.colorScheme.onTertiaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onErrorContainer
+                                    }
+                                )
+                                Text(
+                                    text = "Jarak: ${jarak.toInt()}m dari kantor",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (lokasiValid) {
+                                        MaterialTheme.colorScheme.onTertiaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onErrorContainer
+                                    }
+                                )
+                                Text(
+                                    text = "Maksimal: ${konfigurasiState.radiusMaksimal.toInt()}m",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (lokasiValid) {
+                                        MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                                    } else {
+                                        MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Maps Card
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+            ) {
+                GoogleMap(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp)
+                        .clip(MaterialTheme.shapes.large),
+                    cameraPositionState = cameraPositionState,
+                    properties = MapProperties(isMyLocationEnabled = locationPermissionState.allPermissionsGranted)
+                ) {
+                    if (locationPermissionState.allPermissionsGranted) {
+                        val markerState = remember { MarkerState(position = currentLocation) }
+                        Marker(state = markerState, title = "Lokasi Anda")
+                    }
+
+                    val kantorMarkerState = remember { MarkerState(position = kantorLocation) }
+                    Marker(
+                        state = kantorMarkerState,
+                        title = konfigurasiState.kantorNama,
+                        snippet = "Lokasi Kantor"
+                    )
+
+                    Circle(
+                        center = kantorLocation,
+                        radius = konfigurasiState.radiusMaksimal,
+                        strokeColor = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2f,
+                        fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Menu Grid
+            Text(
+                text = "Menu",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                MenuCard(
+                ModernMenuCard(
                     title = "Kalender",
+                    subtitle = "Lihat jadwal",
                     icon = Icons.Default.CalendarMonth,
-                    color = Color(0xFF2196F3),
+                    color = MaterialTheme.colorScheme.primary,
                     onClick = onNavigateToKalender,
                     modifier = Modifier.weight(1f)
                 )
-                MenuCard(
+                ModernMenuCard(
                     title = "Pengajuan",
+                    subtitle = "Izin & Sakit",
                     icon = Icons.AutoMirrored.Filled.Assignment,
-                    color = Color(0xFFFF9800),
+                    color = MaterialTheme.colorScheme.secondary,
                     onClick = onNavigateToPengajuan,
                     modifier = Modifier.weight(1f)
                 )
@@ -265,18 +360,20 @@ fun HomeScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                MenuCard(
+                ModernMenuCard(
                     title = "Riwayat",
+                    subtitle = "Lihat absensi",
                     icon = Icons.Default.History,
-                    color = Color(0xFF9C27B0),
+                    color = MaterialTheme.colorScheme.tertiary,
                     onClick = onNavigateToRiwayat,
                     modifier = Modifier.weight(1f)
                 )
-                MenuCard(
+                ModernMenuCard(
                     title = "Tunjangan",
+                    subtitle = "Laporan gaji",
                     icon = Icons.Default.Paid,
                     color = Color(0xFF4CAF50),
                     onClick = onNavigateToTunjangan,
@@ -284,153 +381,158 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Info Lokasi
-            Text(
-                text = "Lat: ${String.format("%.6f", currentLocation.latitude)}, " +
-                        "Lng: ${String.format("%.6f", currentLocation.longitude)}",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // BAGIAN TOMBOL ABSEN - YANG DIPERBAIKI
+            // Attendance Button Section
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (!locationPermissionState.allPermissionsGranted) {
-                    Text(
-                        text = "Izinkan akses lokasi untuk melakukan absen",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { locationPermissionState.launchMultiplePermissionRequest() }) {
-                        Text("Minta Izin Lokasi")
-                    }
-                } else {
-                    when (absensiState) {
-                        is AbsensiState.Loading -> {
-                            CircularProgressIndicator()
-                        }
-
-                        // PERBAIKAN: Tampilkan card info tanpa tombol
-                        is AbsensiState.AlreadyAbsen -> {
-                            val data = (absensiState as AbsensiState.AlreadyAbsen).data
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = "✓ Anda sudah melakukan presensi hari ini",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                        textAlign = TextAlign.Center
-                                    )
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    HorizontalDivider()
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    InfoRow("Jam Seharusnya", data.jamSeharusnya ?: "-")
-                                    InfoRow("Jam Masuk", data.jamMasukAktual ?: "-")
-                                    InfoRow("Status", data.kategoriKeterlambatan ?: "-")
-
-                                    if (data.keterlambatanMenit != null && data.keterlambatanMenit > 0) {
-                                        InfoRow("Keterlambatan", "${data.keterlambatanMenit} menit")
-                                    }
-                                }
-                            }
-                        }
-
-                        is AbsensiState.Success -> {
-                            val successState = absensiState as AbsensiState.Success
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = successState.message,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        textAlign = TextAlign.Center
-                                    )
-
-                                    successState.data?.let { data ->
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        HorizontalDivider()
-                                        Spacer(modifier = Modifier.height(12.dp))
-
-                                        InfoRow("Jam Seharusnya", data.jamSeharusnya ?: "-")
-                                        InfoRow("Jam Masuk", data.jamMasukAktual ?: "-")
-
-                                        if (data.keterlambatanMenit != null && data.keterlambatanMenit > 0) {
-                                            InfoRow("Keterlambatan", "${data.keterlambatanMenit} menit")
-                                        }
-                                    }
-                                }
-                            }
-                            // TIDAK ADA TOMBOL DI SINI JUGA
-                        }
-
-                        is AbsensiState.Error -> {
+                    ElevatedCard(
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.LocationOff,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = (absensiState as AbsensiState.Error).message,
-                                color = MaterialTheme.colorScheme.error,
+                                text = "Izin Lokasi Diperlukan",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Aktifkan akses lokasi untuk melakukan presensi",
                                 style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                                 textAlign = TextAlign.Center
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(
-                                onClick = {
-                                    jamMasuk = absensiViewModel.getCurrentTime()
-                                    showJamDialog = true
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = lokasiValid
+                                onClick = { locationPermissionState.launchMultiplePermissionRequest() },
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Coba Lagi")
+                                Text("Berikan Izin Lokasi")
+                            }
+                        }
+                    }
+                } else {
+                    when (absensiState) {
+                        is AbsensiState.Loading -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                strokeWidth = 4.dp
+                            )
+                        }
+
+                        is AbsensiState.AlreadyAbsen -> {
+                            val data = (absensiState as AbsensiState.AlreadyAbsen).data
+                            AttendanceStatusCard(
+                                icon = Icons.Default.CheckCircle,
+                                title = "Presensi Berhasil",
+                                message = "Anda sudah melakukan presensi hari ini",
+                                data = data,
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+
+                        is AbsensiState.Success -> {
+                            val successState = absensiState as AbsensiState.Success
+                            AttendanceStatusCard(
+                                icon = Icons.Default.CheckCircle,
+                                title = "Berhasil!",
+                                message = successState.message,
+                                data = successState.data,
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+
+                        is AbsensiState.Error -> {
+                            ElevatedCard(
+                                colors = CardDefaults.elevatedCardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        Icons.Default.Error,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = (absensiState as AbsensiState.Error).message,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        textAlign = TextAlign.Center,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(
+                                        onClick = {
+                                            jamMasuk = absensiViewModel.getCurrentTime()
+                                            showJamDialog = true
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = lokasiValid
+                                    ) {
+                                        Icon(Icons.Default.Refresh, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Coba Lagi")
+                                    }
+                                }
                             }
                         }
 
-                        // HANYA TAMPILKAN TOMBOL SAAT Idle
                         else -> {
-                            Button(
+                            FilledTonalButton(
                                 onClick = {
                                     jamMasuk = absensiViewModel.getCurrentTime()
                                     showJamDialog = true
                                 },
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = lokasiValid
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(64.dp),
+                                enabled = lokasiValid,
+                                shape = MaterialTheme.shapes.large
                             ) {
-                                Text("Presensi Sekarang")
+                                Icon(
+                                    Icons.Default.Fingerprint,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    "Presensi Sekarang",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
 
                             if (!lokasiValid) {
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "Anda harus berada dalam radius ${konfigurasiState.radiusMaksimal.toInt()}m dari kantor",
+                                    text = "⚠️ Anda harus berada dalam radius ${konfigurasiState.radiusMaksimal.toInt()}m dari kantor",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error,
                                     textAlign = TextAlign.Center
@@ -442,26 +544,134 @@ fun HomeScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Coordinates
+            Text(
+                text = "Koordinat: ${String.format(Locale.US, "%.6f, %.6f", currentLocation.latitude, currentLocation.longitude)}",
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
-fun InfoRow(label: String, value: String) {
+fun InfoChip(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
+@Composable
+fun AttendanceStatusCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    message: String,
+    data: AbsensiData?,
+    containerColor: Color,
+    contentColor: Color
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = containerColor
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = contentColor
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = contentColor,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor,
+                textAlign = TextAlign.Center
+            )
+
+            data?.let {
+                Spacer(modifier = Modifier.height(20.dp))
+                HorizontalDivider(color = contentColor.copy(alpha = 0.3f))
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    InfoRow("Jam Seharusnya", it.jamSeharusnya ?: "-", contentColor)
+                    InfoRow("Jam Masuk", it.jamMasukAktual ?: "-", contentColor)
+                    it.kategoriKeterlambatan?.let { kategori ->
+                        InfoRow("Status", kategori, contentColor)
+                    }
+                    if (it.keterlambatanMenit != null && it.keterlambatanMenit > 0) {
+                        InfoRow("Keterlambatan", "${it.keterlambatanMenit} menit", contentColor)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoRow(label: String, value: String, color: Color = MaterialTheme.colorScheme.onSurface) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            color = color.copy(alpha = 0.7f)
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary
+            fontWeight = FontWeight.Bold,
+            color = color
         )
     }
 }
@@ -482,75 +692,145 @@ fun JamMasukDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Input Jam Masuk") },
+        title = {
+            Text(
+                "Konfirmasi Presensi",
+                fontWeight = FontWeight.Bold
+            )
+        },
         text = {
-            Column {
-                Text(
-                    text = "Jam masuk seharusnya: $jamSeharusnya",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (jarak != null) {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = if (lokasiValid) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Icon(
+                            Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
                             Text(
-                                text = if (lokasiValid) "✓" else "✗",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = if (lokasiValid) Color(0xFF4CAF50) else Color(0xFFF44336)
+                                text = "Jam Seharusnya",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Jarak: ${jarak.toInt()}m (maks: ${radiusMaksimal.toInt()}m)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (lokasiValid) Color(0xFF2E7D32) else Color(0xFFC62828)
+                                text = jamSeharusnya,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                jarak?.let {
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color = if (lokasiValid) {
+                            MaterialTheme.colorScheme.tertiaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.errorContainer
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                if (lokasiValid) Icons.Default.CheckCircle else Icons.Default.Error,
+                                contentDescription = null,
+                                tint = if (lokasiValid) {
+                                    MaterialTheme.colorScheme.onTertiaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = if (lokasiValid) "Lokasi Valid" else "Lokasi Tidak Valid",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (lokasiValid) {
+                                        MaterialTheme.colorScheme.onTertiaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onErrorContainer
+                                    }
+                                )
+                                Text(
+                                    text = "Jarak: ${it.toInt()}m (maks: ${radiusMaksimal.toInt()}m)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (lokasiValid) {
+                                        MaterialTheme.colorScheme.onTertiaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onErrorContainer
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = jamInput,
                     onValueChange = {
                         jamInput = it
                         onJamChange(it)
                     },
-                    label = { Text("Jam Masuk (HH:mm)") },
-                    placeholder = { Text("08:30") },
+                    label = { Text("Jam Masuk") },
+                    placeholder = { Text("HH:mm") },
+                    leadingIcon = {
+                        Icon(Icons.Default.AccessTime, contentDescription = null)
+                    },
                     singleLine = true,
-                    enabled = lokasiValid
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Format: HH:mm (contoh: 08:30)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    enabled = lokasiValid,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    supportingText = {
+                        Text("Format: HH:mm (contoh: 08:30)")
+                    }
                 )
 
                 if (!lokasiValid) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "⚠️ Lokasi Anda terlalu jauh dari kantor",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "⚠️",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Lokasi Anda terlalu jauh dari kantor",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
                 }
             }
         },
         confirmButton = {
-            Button(
+            FilledTonalButton(
                 onClick = onConfirm,
                 enabled = lokasiValid
             ) {
+                Icon(Icons.Default.Fingerprint, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("Presensi")
             }
         },
@@ -558,22 +838,24 @@ fun JamMasukDialog(
             TextButton(onClick = onDismiss) {
                 Text("Batal")
             }
-        }
+        },
+        shape = MaterialTheme.shapes.extraLarge
     )
 }
 
 @Composable
-fun MenuCard(
+fun ModernMenuCard(
     title: String,
+    subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     color: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.height(100.dp),
+    ElevatedCard(
+        modifier = modifier.height(120.dp),
         onClick = onClick,
-        colors = CardDefaults.cardColors(
+        colors = CardDefaults.elevatedCardColors(
             containerColor = color.copy(alpha = 0.1f)
         )
     ) {
@@ -581,11 +863,10 @@ fun MenuCard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Surface(
-                shape = MaterialTheme.shapes.small,
+                shape = MaterialTheme.shapes.medium,
                 color = color
             ) {
                 Icon(
@@ -593,18 +874,23 @@ fun MenuCard(
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier
-                        .padding(8.dp)
+                        .padding(10.dp)
                         .size(24.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = color,
-                textAlign = TextAlign.Center
-            )
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = color.copy(alpha = 0.7f)
+                )
+            }
         }
     }
 }

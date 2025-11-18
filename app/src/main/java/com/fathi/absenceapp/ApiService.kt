@@ -7,7 +7,6 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 
 
-// Data Models
 data class RegisterRequest(
     val nama: String,
     val nim: String,
@@ -27,13 +26,12 @@ data class AbsenRequest(
     val longitude: Double
 )
 
-// NEW: Request untuk presensi dengan jam masuk
 data class PresensiRequest(
     @SerializedName("mahasiswa_id")
     val mahasiswaId: Int,
     @SerializedName("jam_seharusnya")
     val jamSeharusnya: String? = null,
-    @SerializedName("jam_masuk_aktual")// Optional, default dari server
+    @SerializedName("jam_masuk_aktual")
     val jamMasukAktual: String,
     val latitude: Double,
     val longitude: Double
@@ -46,7 +44,6 @@ data class MahasiswaData(
     val role: String? = null
 )
 
-// UPDATED: Tambah field keterlambatan
 data class AbsensiData(
     val id: Int,
     @SerializedName("mahasiswa_id")
@@ -70,7 +67,6 @@ data class AbsensiData(
     val jarakDariKantor: Double? = null
 )
 
-// NEW: Kalender
 data class KalenderData(
     val id: Int,
     val tanggal: String,
@@ -84,7 +80,6 @@ data class KalenderRequest(
     val keterangan: String?
 )
 
-// NEW: Pengajuan
 data class PengajuanData(
     val id: Int,
     @SerializedName("mahasiswa_id")
@@ -116,7 +111,6 @@ data class ProsesPengajuanRequest(
     val alasanDitolak: String? = null
 )
 
-// NEW: Tunjangan
 data class KehadiranDetail(
     @SerializedName("total_hari_kerja")
     val totalHariKerja: Int,
@@ -174,7 +168,6 @@ data class ApiResponse<T>(
     val token: String? = null
 )
 
-// NEW: Konfigurasi
 data class KonfigurasiData(
     @SerializedName("jam_masuk_default") val jamMasukDefault: String,
     @SerializedName("kantor_latitude") val kantorLatitude: String? = null,
@@ -183,14 +176,12 @@ data class KonfigurasiData(
     @SerializedName("radius_maksimal") val radiusMaksimal: String? = null
 )
 
-// NEW: Response cek absen hari ini
 data class CekAbsenResponse(
     @SerializedName("sudah_absen")
     val sudahAbsen: Boolean,
     val data: AbsensiData? = null
 )
 
-// Retrofit API Service
 interface ApiService {
 
     @POST("register")
@@ -199,14 +190,12 @@ interface ApiService {
     @POST("login")
     suspend fun login(@Body request: LoginRequest): Response<ApiResponse<MahasiswaData>>
 
-    // Endpoint lama (backward compatibility)
     @POST("absen")
     suspend fun absen(
         @Header("Authorization") token: String,
         @Body request: AbsenRequest
     ): Response<ApiResponse<AbsensiData>>
 
-    // NEW: Endpoint presensi dengan jam masuk
     @POST("presensi")
     suspend fun presensi(
         @Header("Authorization") token: String,
@@ -238,7 +227,6 @@ interface ApiService {
         @Path("id") id: Int
     ): Response<ApiResponse<Unit>>
 
-    // Pengajuan
     @Multipart
     @POST("pengajuan")
     suspend fun ajukanPengajuan(
@@ -265,7 +253,6 @@ interface ApiService {
         @Body request: ProsesPengajuanRequest
     ): Response<ApiResponse<Unit>>
 
-    // Tunjangan
     @GET("tunjangan/{mahasiswa_id}")
     suspend fun getTunjangan(
         @Header("Authorization") token: String,
@@ -280,20 +267,17 @@ interface ApiService {
         @Path("mahasiswa_id") mahasiswaId: Int
     ): Response<ApiResponse<List<TunjanganData>>>
 
-    // NEW: Get konfigurasi
     @GET("konfigurasi")
     suspend fun getKonfigurasi(
         @Header("Authorization") token: String
     ): Response<ApiResponse<KonfigurasiData>>
 
-    // NEW: Update konfigurasi
     @PUT("konfigurasi")
     suspend fun updateKonfigurasi(
         @Header("Authorization") token: String,
         @Body config: Map<String, String>
     ): Response<ApiResponse<KonfigurasiData>>
 
-    // NEW: Cek apakah sudah absen hari ini
     @GET("cek-absen-hari-ini/{id_mahasiswa}")
     suspend fun cekAbsenHariIni(
         @Header("Authorization") token: String,

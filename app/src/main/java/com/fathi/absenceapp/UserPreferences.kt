@@ -47,10 +47,6 @@ class UserPreferences(private val context: Context) {
         preferences[USER_NAME_KEY]
     }
 
-    val userNim: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[USER_NIM_KEY]
-    }
-
     val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[IS_LOGGED_IN_KEY] ?: false
     }

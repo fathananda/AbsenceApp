@@ -15,6 +15,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
 import android.app.Application
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -25,7 +27,6 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ViewModel
 sealed class KalenderState {
     object Idle : KalenderState()
     object Loading : KalenderState()
@@ -64,7 +65,6 @@ class KalenderViewModel(application: Application) : AndroidViewModel(application
     }
 }
 
-// Screen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KalenderScreen(
@@ -84,14 +84,21 @@ fun KalenderScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Kalender Sekolah") },
+                title = {
+                    Text(
+                        "Kalender Sekolah",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -101,16 +108,20 @@ fun KalenderScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Filter bulan/tahun
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal = 8.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -125,14 +136,26 @@ fun KalenderScreen(
                             viewModel.loadKalender(selectedMonth, selectedYear)
                         }
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous")
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            "Bulan sebelumnya",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
 
-                    Text(
-                        text = "${namaBulan[selectedMonth - 1]} $selectedYear",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = namaBulan[selectedMonth - 1],
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = selectedYear.toString(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
 
                     IconButton(
                         onClick = {
@@ -145,124 +168,169 @@ fun KalenderScreen(
                             viewModel.loadKalender(selectedMonth, selectedYear)
                         }
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next")
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            "Bulan berikutnya",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
                 }
             }
 
             // List kalender
-            when (val state = kalenderState) {
-                is KalenderState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (val state = kalenderState) {
+                    is KalenderState.Loading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .size(48.dp),
+                            strokeWidth = 4.dp
+                        )
                     }
-                }
-                is KalenderState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    is KalenderState.Error -> {
                         Column(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                                modifier = Modifier.size(80.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.ErrorOutline,
+                                    contentDescription = null,
+                                    modifier = Modifier.padding(20.dp),
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = state.message,
-                                color = MaterialTheme.colorScheme.error
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Medium
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { viewModel.loadKalender(selectedMonth, selectedYear) }) {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            FilledTonalButton(
+                                onClick = { viewModel.loadKalender(selectedMonth, selectedYear) },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Refresh, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text("Coba Lagi")
                             }
                         }
                     }
-                }
-                is KalenderState.Success -> {
-                    if (state.data.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
+                    is KalenderState.Success -> {
+                        if (state.data.isEmpty()) {
                             Column(
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .padding(24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Icon(
-                                    Icons.Default.Event,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.outline
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier.size(80.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.EventBusy,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(20.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "Tidak ada acara bulan ini",
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    text = "Tidak ada acara",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Belum ada jadwal untuk bulan ini",
+                                    style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(state.data) { event ->
-                                KalenderItem(event)
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(state.data) { event ->
+                                    KalenderItemModern(event)
+                                }
                             }
                         }
                     }
+                    else -> {}
                 }
-                else -> {}
             }
         }
     }
 }
 
 @Composable
-fun KalenderItem(event: KalenderData) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when (event.jenis) {
-                "libur" -> Color(0xFFFFEBEE)
-                "ujian" -> Color(0xFFFFF3E0)
-                "kegiatan" -> Color(0xFFE3F2FD)
-                else -> MaterialTheme.colorScheme.surface
-            }
+fun KalenderItemModern(event: KalenderData) {
+    val (bgColor, iconColor, badgeColor, icon) = when (event.jenis) {
+        "libur" -> listOf(
+            Color(0xFFFFEBEE),
+            Color(0xFFF44336),
+            Color(0xFFEF5350),
+            Icons.Default.BeachAccess
         )
+        "ujian" -> listOf(
+            Color(0xFFFFF3E0),
+            Color(0xFFFF9800),
+            Color(0xFFFFA726),
+            Icons.AutoMirrored.Filled.MenuBook
+        )
+        "kegiatan" -> listOf(
+            Color(0xFFE3F2FD),
+            Color(0xFF2196F3),
+            Color(0xFF42A5F5),
+            Icons.Default.Event
+        )
+        else -> listOf(
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.secondary,
+            MaterialTheme.colorScheme.secondary,
+            Icons.Default.CalendarToday
+        )
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor as Color),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = when (event.jenis) {
-                    "libur" -> Color(0xFFF44336)
-                    "ujian" -> Color(0xFFFF9800)
-                    "kegiatan" -> Color(0xFF2196F3)
-                    else -> MaterialTheme.colorScheme.secondary
-                },
-                modifier = Modifier.size(48.dp)
+                shape = RoundedCornerShape(16.dp),
+                color = iconColor as Color,
+                modifier = Modifier.size(56.dp)
             ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        when (event.jenis) {
-                            "libur" -> Icons.Default.BeachAccess
-                            "ujian" -> Icons.AutoMirrored.Filled.MenuBook
-                            "kegiatan" -> Icons.Default.Event
-                            else -> Icons.Default.CalendarToday
-                        },
-                        contentDescription = null,
-                        tint = Color.White
-                    )
-                }
+                Icon(
+                    icon as androidx.compose.ui.graphics.vector.ImageVector,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.padding(14.dp)
+                )
             }
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -270,36 +338,30 @@ fun KalenderItem(event: KalenderData) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = formatTanggal(event.tanggal),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.labelLarge,
+                    color = iconColor.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = event.keterangan ?: event.jenis.capitalize(Locale.ROOT),
+                    text = event.keterangan ?: event.jenis.replaceFirstChar {
+                        if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                    },
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = when (event.jenis) {
-                        "libur" -> Color(0x20F44336)
-                        "ujian" -> Color(0x20FF9800)
-                        "kegiatan" -> Color(0x202196F3)
-                        else -> Color(0x20000000)
-                    }
+                    shape = RoundedCornerShape(8.dp),
+                    color = (badgeColor as Color).copy(alpha = 0.2f)
                 ) {
                     Text(
                         text = event.jenis.uppercase(),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = when (event.jenis) {
-                            "libur" -> Color(0xFFD32F2F)
-                            "ujian" -> Color(0xFFF57C00)
-                            "kegiatan" -> Color(0xFF1976D2)
-                            else -> Color.Gray
-                        }
+                        color = badgeColor
                     )
                 }
             }
@@ -313,7 +375,7 @@ fun formatTanggal(dateString: String): String {
         val outputFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
         val date = inputFormat.parse(dateString)
         outputFormat.format(date ?: Date())
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         dateString
     }
 }

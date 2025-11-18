@@ -17,7 +17,7 @@ sealed class AbsensiState {
     object Loading : AbsensiState()
     data class Success(val message: String, val data: AbsensiData? = null) : AbsensiState()
     data class Error(val message: String) : AbsensiState()
-    data class AlreadyAbsen(val data: AbsensiData) : AbsensiState() // NEW
+    data class AlreadyAbsen(val data: AbsensiData) : AbsensiState()
 }
 
 data class RiwayatState(
@@ -30,7 +30,7 @@ data class KonfigurasiState(
     val jamMasukDefault: String = "08:00",
     val kantorLatitude: Double = 37.421998,
     val kantorLongitude: Double = -122.084000,
-    val kantorNama: String = "Kantor Pusat",
+    val kantorNama: String = "SMK Al-Luthfah",
     val radiusMaksimal: Double = 1000.0,
     val isLoading: Boolean = false,
     val error: String? = null
@@ -50,14 +50,12 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
     val konfigurasiState: StateFlow<KonfigurasiState> = _konfigurasiState
 
     val userName = userPreferences.userName
-    val userId = userPreferences.userId
 
     init {
         loadKonfigurasi()
         cekAbsenHariIni()
     }
 
-    // NEW: Cek apakah sudah absen hari ini
     fun cekAbsenHariIni() {
         viewModelScope.launch {
             try {
@@ -74,14 +72,12 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
                         _absensiState.value = AbsensiState.Idle
                     }
                 }
-            } catch (e: Exception) {
-                // Silent fail, tetap tampilkan tombol absen
+            } catch (_: Exception) {
                 _absensiState.value = AbsensiState.Idle
             }
         }
     }
 
-    // Load konfigurasi jam masuk default
     fun loadKonfigurasi() {
         viewModelScope.launch {
             try {
@@ -115,7 +111,6 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // NEW: Hitung jarak dari kantor (Haversine formula)
     fun hitungJarak(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val R = 6371e3 // Radius bumi dalam meter
         val φ1 = Math.toRadians(lat1)
@@ -131,7 +126,6 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
         return R * c // Jarak dalam meter
     }
 
-    // NEW: Validasi lokasi sebelum presensi
     fun validasiLokasi(latitude: Double, longitude: Double): Pair<Boolean, String> {
         val config = _konfigurasiState.value
         val jarak = hitungJarak(
@@ -198,7 +192,6 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Build pesan hasil presensi
     private fun buildPresensiMessage(data: AbsensiData?): String {
         if (data == null) return "Presensi berhasil!"
 
@@ -223,7 +216,6 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
         return sb.toString().trim()
     }
 
-    // Mendapatkan jam saat ini dalam format HH:mm:ss
     fun getCurrentTime(): String {
         val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
         return sdf.format(Date())

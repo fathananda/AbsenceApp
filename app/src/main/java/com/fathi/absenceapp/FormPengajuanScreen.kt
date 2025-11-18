@@ -7,7 +7,12 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,9 +26,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CameraAlt
@@ -34,18 +41,20 @@ import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -84,8 +93,8 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
-// ViewModel
 sealed class FormPengajuanState {
     object Idle : FormPengajuanState()
     object Loading : FormPengajuanState()
@@ -95,7 +104,6 @@ sealed class FormPengajuanState {
 
 class FormPengajuanViewModel(application: Application) : AndroidViewModel(application) {
     private val userPreferences = UserPreferences(application)
-    private val context = application.applicationContext
 
     private val _formState = MutableStateFlow<FormPengajuanState>(FormPengajuanState.Idle)
     val formState: StateFlow<FormPengajuanState> = _formState
@@ -116,20 +124,17 @@ class FormPengajuanViewModel(application: Application) : AndroidViewModel(applic
 
                 val token = userPreferences.token.first() ?: ""
 
-                // Prepare request bodies
                 val mahasiswaIdBody = mahasiswaId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
                 val jenisBody = jenis.toRequestBody("text/plain".toMediaTypeOrNull())
                 val tanggalMulaiBody = tanggalMulai.toRequestBody("text/plain".toMediaTypeOrNull())
                 val tanggalSelesaiBody = tanggalSelesai.toRequestBody("text/plain".toMediaTypeOrNull())
                 val keteranganBody = keterangan.toRequestBody("text/plain".toMediaTypeOrNull())
 
-                // Prepare foto bukti
                 var fotoPart: MultipartBody.Part? = null
                 if (fotoBuktiUri != null) {
-                    val file = getFileFromUri(context, fotoBuktiUri)
+                    val file = getFileFromUri(getApplication(), fotoBuktiUri)
                     if (file != null) {
-                        val mimeType = context.contentResolver.getType(fotoBuktiUri)
-
+                        val mimeType = getApplication<Application>().contentResolver.getType(fotoBuktiUri)
                         val requestFile = file.asRequestBody(mimeType?.toMediaTypeOrNull())
                         fotoPart = MultipartBody.Part.createFormData(
                             "foto_bukti",
@@ -164,17 +169,13 @@ class FormPengajuanViewModel(application: Application) : AndroidViewModel(applic
         return try {
             val inputStream = context.contentResolver.openInputStream(uri) ?: return null
 
-            // Get file name
-            var fileName = "upload_${System.currentTimeMillis()}"
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                if (cursor.moveToFirst() && nameIndex >= 0) {
-                    fileName = cursor.getString(nameIndex)
-                }
-            }
+            val originalFileName = getOriginalFileName(context, uri)
 
-            // Create temp file
-            val file = File(context.cacheDir, fileName)
+            val sanitizedFileName = sanitizeFileName(originalFileName)
+
+            val uniqueFileName = "${System.currentTimeMillis()}_${UUID.randomUUID()}_$sanitizedFileName"
+
+            val file = File(context.cacheDir, uniqueFileName)
             FileOutputStream(file).use { output ->
                 inputStream.copyTo(output)
             }
@@ -185,13 +186,26 @@ class FormPengajuanViewModel(application: Application) : AndroidViewModel(applic
             null
         }
     }
+    private fun getOriginalFileName(context: Context, uri: Uri): String {
+        var fileName = "upload"
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (cursor.moveToFirst() && nameIndex >= 0) {
+                fileName = cursor.getString(nameIndex)
+            }
+        }
+        return fileName
+    }
 
-    fun resetState() {
-        _formState.value = FormPengajuanState.Idle
+
+    private fun sanitizeFileName(fileName: String): String {
+        return fileName
+            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            .take(100)
+            .ifEmpty { "upload" }
     }
 }
 
-// Screen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormPengajuanScreen(
@@ -208,21 +222,18 @@ fun FormPengajuanScreen(
     var keterangan by remember { mutableStateOf("") }
     var fotoBuktiUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Date pickers
     var showDatePickerMulai by remember { mutableStateOf(false) }
     var showDatePickerSelesai by remember { mutableStateOf(false) }
 
     val datePickerStateMulai = rememberDatePickerState()
     val datePickerStateSelesai = rememberDatePickerState()
 
-    // Image picker
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         fotoBuktiUri = uri
     }
 
-    // Handle success
     LaunchedEffect(formState) {
         if (formState is FormPengajuanState.Success) {
             kotlinx.coroutines.delay(2000)
@@ -230,7 +241,6 @@ fun FormPengajuanScreen(
         }
     }
 
-    // Date picker dialogs
     if (showDatePickerMulai) {
         DatePickerDialog(
             onDismissRequest = { showDatePickerMulai = false },
@@ -280,14 +290,21 @@ fun FormPengajuanScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Form Pengajuan") },
+                title = {
+                    Text(
+                        "Form Pengajuan",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -297,230 +314,425 @@ fun FormPengajuanScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Jenis Pengajuan
-            Text(
-                text = "Jenis Pengajuan",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                shape = RoundedCornerShape(20.dp)
             ) {
-                JenisPengajuanChip(
-                    label = "Izin",
-                    icon = Icons.Default.EventBusy,
-                    selected = selectedJenis == "izin",
-                    onClick = { selectedJenis = "izin" }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Assignment,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = "Ajukan Permohonan",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "Isi form dengan lengkap dan benar",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Jenis Pengajuan",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                JenisPengajuanChip(
-                    label = "Sakit",
-                    icon = Icons.Default.LocalHospital,
-                    selected = selectedJenis == "sakit",
-                    onClick = { selectedJenis = "sakit" }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    JenisPengajuanChipModern(
+                        label = "Izin",
+                        icon = Icons.Default.EventBusy,
+                        selected = selectedJenis == "izin",
+                        onClick = { selectedJenis = "izin" },
+                        modifier = Modifier.weight(1f)
+                    )
+                    JenisPengajuanChipModern(
+                        label = "Sakit",
+                        icon = Icons.Default.LocalHospital,
+                        selected = selectedJenis == "sakit",
+                        onClick = { selectedJenis = "sakit" },
+                        modifier = Modifier.weight(1f)
+                    )
+                    JenisPengajuanChipModern(
+                        label = "Dinas",
+                        icon = Icons.Default.Work,
+                        selected = selectedJenis == "dinas",
+                        onClick = { selectedJenis = "dinas" },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Periode Waktu",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                JenisPengajuanChip(
-                    label = "Dinas",
-                    icon = Icons.Default.Work,
-                    selected = selectedJenis == "dinas",
-                    onClick = { selectedJenis = "dinas" }
+
+                OutlinedTextField(
+                    value = tanggalMulai,
+                    onValueChange = {},
+                    label = { Text("Tanggal Mulai") },
+                    placeholder = { Text("Pilih tanggal mulai") },
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = true,
+                    trailingIcon = {
+                        IconButton(onClick = { showDatePickerMulai = true }) {
+                            Icon(
+                                Icons.Default.CalendarToday,
+                                "Pilih tanggal",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    ),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = tanggalSelesai,
+                    onValueChange = {},
+                    label = { Text("Tanggal Selesai") },
+                    placeholder = { Text("Pilih tanggal selesai") },
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = true,
+                    trailingIcon = {
+                        IconButton(onClick = { showDatePickerSelesai = true }) {
+                            Icon(
+                                Icons.Default.CalendarToday,
+                                "Pilih tanggal",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    ),
+                    singleLine = true
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Keterangan",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
-            // Tanggal Mulai
-            OutlinedTextField(
-                value = tanggalMulai,
-                onValueChange = {},
-                label = { Text("Tanggal Mulai") },
-                placeholder = { Text("Pilih tanggal") },
-                modifier = Modifier.fillMaxWidth(),
-                readOnly = true,
-                trailingIcon = {
-                    IconButton(onClick = { showDatePickerMulai = true }) {
-                        Icon(Icons.Default.CalendarToday, "Pilih tanggal")
-                    }
-                },
-                singleLine = true
-            )
+                OutlinedTextField(
+                    value = keterangan,
+                    onValueChange = { keterangan = it },
+                    label = { Text("Alasan pengajuan") },
+                    placeholder = { Text("Jelaskan alasan pengajuan Anda...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 4,
+                    maxLines = 6,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Upload Foto Section
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Foto Bukti",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Opsional - Lampirkan dokumen pendukung",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-            // Tanggal Selesai
-            OutlinedTextField(
-                value = tanggalSelesai,
-                onValueChange = {},
-                label = { Text("Tanggal Selesai") },
-                placeholder = { Text("Pilih tanggal") },
-                modifier = Modifier.fillMaxWidth(),
-                readOnly = true,
-                trailingIcon = {
-                    IconButton(onClick = { showDatePickerSelesai = true }) {
-                        Icon(Icons.Default.CalendarToday, "Pilih tanggal")
-                    }
-                },
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Keterangan
-            OutlinedTextField(
-                value = keterangan,
-                onValueChange = { keterangan = it },
-                label = { Text("Keterangan") },
-                placeholder = { Text("Alasan pengajuan...") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                maxLines = 5
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Upload Foto
-            Text(
-                text = "Foto Bukti (Opsional)",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (fotoBuktiUri != null) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
+                AnimatedVisibility(
+                    visible = fotoBuktiUri != null,
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Image(
-                            painter = rememberAsyncImagePainter(fotoBuktiUri),
-                            contentDescription = "Foto bukti",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            Image(
+                                painter = rememberAsyncImagePainter(fotoBuktiUri),
+                                contentDescription = "Foto bukti",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
 
-                        IconButton(
-                            onClick = { fotoBuktiUri = null },
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(8.dp)
-                        ) {
-                            Surface(
-                                shape = MaterialTheme.shapes.small,
-                                color = Color.Black.copy(alpha = 0.6f)
-                            ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Hapus foto",
-                                    tint = Color.White,
-                                    modifier = Modifier.padding(4.dp)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.Black.copy(alpha = 0.3f),
+                                                Color.Transparent
+                                            )
+                                        )
+                                    )
+                            )
+
+                            FilledTonalIconButton(
+                                onClick = { fotoBuktiUri = null },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(12.dp),
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
                                 )
+                            ) {
+                                Icon(Icons.Default.Close, "Hapus foto")
                             }
                         }
                     }
                 }
-            } else {
-                OutlinedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .clickable { imagePickerLauncher.launch("image/*") },
-                    colors = CardDefaults.outlinedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+
+                AnimatedVisibility(
+                    visible = fotoBuktiUri == null,
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Tap untuk pilih foto",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Surat dokter, undangan, dll",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Submit Button
-            when (formState) {
-                is FormPengajuanState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is FormPengajuanState.Success -> {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .clickable { imagePickerLauncher.launch("image/*") },
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFE8F5E9)
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            2.dp,
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                         )
                     ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = Color(0xFF4CAF50)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                modifier = Modifier.size(64.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.CameraAlt,
+                                    contentDescription = null,
+                                    modifier = Modifier.padding(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = (formState as FormPengajuanState.Success).message,
-                                color = Color(0xFF2E7D32)
+                                text = "Tap untuk pilih foto",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Surat dokter, undangan, dll",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
-                is FormPengajuanState.Error -> {
-                    Column {
+            }
+
+            Column(
+                modifier = Modifier.animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                when (formState) {
+                    is FormPengajuanState.Loading -> {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFFFFEBEE)
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
                             )
                         ) {
                             Row(
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    Icons.Default.Error,
-                                    contentDescription = null,
-                                    tint = Color(0xFFF44336)
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 3.dp
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = (formState as FormPengajuanState.Error).message,
-                                    color = Color(0xFFC62828)
+                                    text = "Mengirim pengajuan...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    is FormPengajuanState.Success -> {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFE8F5E9)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Berhasil!",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF2E7D32)
+                                    )
+                                    Text(
+                                        text = (formState as FormPengajuanState.Success).message,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color(0xFF388E3C)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    is FormPengajuanState.Error -> {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFFFFEBEE)
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Error,
+                                        contentDescription = null,
+                                        tint = Color(0xFFF44336),
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "Gagal",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFC62828)
+                                        )
+                                        Text(
+                                            text = (formState as FormPengajuanState.Error).message,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = Color(0xFFD32F2F)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Button(
+                                onClick = {
+                                    userId?.let {
+                                        viewModel.submitPengajuan(
+                                            mahasiswaId = it,
+                                            jenis = selectedJenis,
+                                            tanggalMulai = tanggalMulai,
+                                            tanggalSelesai = tanggalSelesai,
+                                            keterangan = keterangan,
+                                            fotoBuktiUri = fotoBuktiUri
+                                        )
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                enabled = tanggalMulai.isNotEmpty() && tanggalSelesai.isNotEmpty(),
+                                shape = RoundedCornerShape(16.dp),
+                                elevation = ButtonDefaults.buttonElevation(
+                                    defaultElevation = 2.dp,
+                                    pressedElevation = 6.dp
+                                )
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Kirim Pengajuan",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                    else -> {
                         Button(
                             onClick = {
                                 userId?.let {
@@ -534,35 +746,24 @@ fun FormPengajuanScreen(
                                     )
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = tanggalMulai.isNotEmpty() && tanggalSelesai.isNotEmpty()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            enabled = tanggalMulai.isNotEmpty() && tanggalSelesai.isNotEmpty(),
+                            shape = RoundedCornerShape(16.dp),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 2.dp,
+                                pressedElevation = 6.dp
+                            )
                         ) {
                             Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Kirim Pengajuan")
+                            Text(
+                                "Kirim Pengajuan",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
-                    }
-                }
-                else -> {
-                    Button(
-                        onClick = {
-                            userId?.let {
-                                viewModel.submitPengajuan(
-                                    mahasiswaId = it,
-                                    jenis = selectedJenis,
-                                    tanggalMulai = tanggalMulai,
-                                    tanggalSelesai = tanggalSelesai,
-                                    keterangan = keterangan,
-                                    fotoBuktiUri = fotoBuktiUri
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = tanggalMulai.isNotEmpty() && tanggalSelesai.isNotEmpty()
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Kirim Pengajuan")
                     }
                 }
             }
@@ -573,24 +774,57 @@ fun FormPengajuanScreen(
 }
 
 @Composable
-fun JenisPengajuanChip(
+fun JenisPengajuanChipModern(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        leadingIcon = {
+    Card(
+        modifier = modifier
+            .height(80.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
+        ),
+        border = if (selected) androidx.compose.foundation.BorderStroke(
+            2.dp,
+            MaterialTheme.colorScheme.primary
+        ) else null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Icon(
                 icon,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(28.dp),
+                tint = if (selected)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = if (selected)
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    )
+    }
 }
 
 fun formatDateToString(date: Date): String {

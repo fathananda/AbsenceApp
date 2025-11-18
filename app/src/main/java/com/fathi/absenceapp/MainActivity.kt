@@ -103,7 +103,6 @@ fun AbsensiApp() {
             )
         }
 
-        // NEW: Pengajuan
         composable("pengajuan") {
             PengajuanScreen(
                 onNavigateBack = {
@@ -123,7 +122,6 @@ fun AbsensiApp() {
             )
         }
 
-        // NEW: Tunjangan
         composable("tunjangan") {
             TunjanganScreen(
                 onNavigateBack = {
