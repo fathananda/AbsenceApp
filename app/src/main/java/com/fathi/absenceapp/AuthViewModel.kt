@@ -63,14 +63,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     val userData = body.data
 
                     if (userData != null) {
+                        val role = userData.role ?: "mahasiswa"
                         userPreferences.saveUserData(
                             token = "Bearer $token",
                             id = userData.id,
                             nama = userData.nama,
                             nim = userData.nim,
-                            role = userData.role ?: "mahasiswa"
+                            role = role
                         )
-                        delay(300)
+                        delay(500)
                         _authState.value = AuthState.Success("Login berhasil!")
                     } else {
                         _authState.value = AuthState.Error("Data user tidak lengkap")

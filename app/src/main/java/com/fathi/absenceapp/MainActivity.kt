@@ -49,8 +49,9 @@ fun AbsensiApp() {
                 onNavigateToRegister = {
                     navController.navigate("register")
                 },
-                onLoginSuccess = {
-                    navController.navigate("home") {
+                onLoginSuccess = { isAdminUser ->
+                    val destination = if (isAdminUser) "admin/dashboard" else "home"
+                    navController.navigate(destination) {
                         popUpTo("login") { inclusive = true }
                     }
                 },
