@@ -27,7 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
-    onLoginSuccess: () -> Unit,
+    onLoginSuccess: (Boolean) -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
     var nim by remember { mutableStateOf("") }
@@ -35,11 +35,13 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
 
     val authState by viewModel.authState.collectAsState()
+    val userRole by viewModel.userRole.collectAsState(initial = null)
 
     LaunchedEffect(authState) {
         when (authState) {
             is AuthState.Success -> {
-                onLoginSuccess()
+                val isAdmin = userRole == "admin"
+                onLoginSuccess(isAdmin)
                 viewModel.resetAuthState()
             }
             else -> {}

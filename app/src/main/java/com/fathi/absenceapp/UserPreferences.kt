@@ -16,15 +16,17 @@ class UserPreferences(private val context: Context) {
         private val USER_ID_KEY = intPreferencesKey("user_id")
         private val USER_NAME_KEY = stringPreferencesKey("user_name")
         private val USER_NIM_KEY = stringPreferencesKey("user_nim")
+        private val USER_ROLE_KEY = stringPreferencesKey("user_role")
         private val IS_LOGGED_IN_KEY = booleanPreferencesKey("is_logged_in")
     }
 
-    suspend fun saveUserData(token: String, id: Int, nama: String, nim: String) {
+    suspend fun saveUserData(token: String, id: Int, nama: String, nim: String, role: String) {
         context.dataStore.edit { preferences ->
             preferences[TOKEN_KEY] = token
             preferences[USER_ID_KEY] = id
             preferences[USER_NAME_KEY] = nama
             preferences[USER_NIM_KEY] = nim
+            preferences[USER_ROLE_KEY] = role
             preferences[IS_LOGGED_IN_KEY] = true
         }
     }
@@ -47,7 +49,15 @@ class UserPreferences(private val context: Context) {
         preferences[USER_NAME_KEY]
     }
 
+    val userRole: Flow<String?> = context.dataStore.data.map { preferences -> // TAMBAHAN
+        preferences[USER_ROLE_KEY]
+    }
+
     val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[IS_LOGGED_IN_KEY] ?: false
+    }
+
+    val isAdmin: Flow<Boolean> = context.dataStore.data.map { preferences -> // TAMBAHAN
+        preferences[USER_ROLE_KEY] == "admin"
     }
 }

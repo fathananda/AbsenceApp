@@ -182,6 +182,53 @@ data class CekAbsenResponse(
     val data: AbsensiData? = null
 )
 
+data class DashboardData(
+    @SerializedName("total_guru") val totalGuru: Int,
+    @SerializedName("absen_hari_ini") val absenHariIni: Int,
+    @SerializedName("pengajuan_pending") val pengajuanPending: Int,
+    @SerializedName("telat_bulan_ini") val telatBulanIni: Int
+)
+
+data class GuruData(
+    val id: Int,
+    val nama: String,
+    val nim: String,
+    val role: String,
+    @SerializedName("gaji_pokok") val gajiPokok: Double,
+    @SerializedName("tunjangan_hadir") val tunjanganHadir: Double,
+    @SerializedName("potongan_telat_sedang") val potonganTelatSedang: Double,
+    @SerializedName("potongan_telat_berat") val potonganTelatBerat: Double,
+    @SerializedName("created_at") val createdAt: String
+)
+
+data class UpdateGuruRequest(
+    val nama: String,
+    val nim: String,
+    @SerializedName("gaji_pokok") val gajiPokok: Double,
+    @SerializedName("tunjangan_hadir") val tunjanganHadir: Double,
+    @SerializedName("potongan_telat_sedang") val potonganTelatSedang: Double,
+    @SerializedName("potongan_telat_berat") val potonganTelatBerat: Double
+)
+
+data class CreateGuruRequest(
+    val nama: String,
+    val nim: String,
+    val password: String,
+    @SerializedName("gaji_pokok") val gajiPokok: Double? = null,
+    @SerializedName("tunjangan_hadir") val tunjanganHadir: Double? = null
+)
+
+data class LaporanKehadiranData(
+    val id: Int,
+    val nama: String,
+    val nim: String,
+    @SerializedName("total_hadir") val totalHadir: Int,
+    @SerializedName("tepat_waktu") val tepatWaktu: Int,
+    @SerializedName("telat_ringan") val telatRingan: Int,
+    @SerializedName("telat_sedang") val telatSedang: Int,
+    @SerializedName("telat_berat") val telatBerat: Int
+)
+
 interface ApiService {
 
     @POST("register")
@@ -283,4 +330,58 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id_mahasiswa") idMahasiswa: Int
     ): Response<CekAbsenResponse>
+
+    @GET("admin/dashboard")
+    suspend fun getAdminDashboard(
+        @Header("Authorization") token: String
+    ): Response<ApiResponse<DashboardData>>
+
+    @GET("admin/guru")
+    suspend fun getAllGuru(
+        @Header("Authorization") token: String
+    ): Response<ApiResponse<List<GuruData>>>
+
+    @GET("admin/guru/{id}")
+    suspend fun getGuruDetail(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): Response<ApiResponse<GuruData>>
+
+    @PUT("admin/guru/{id}")
+    suspend fun updateGuru(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Body request: UpdateGuruRequest
+    ): Response<ApiResponse<Unit>>
+
+    @DELETE("admin/guru/{id}")
+    suspend fun deleteGuru(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): Response<ApiResponse<Unit>>
+
+    @POST("admin/create-guru")
+    suspend fun createGuru(
+        @Header("Authorization") token: String,
+        @Body request: CreateGuruRequest
+    ): Response<ApiResponse<GuruData>>
+
+    @GET("admin/absensi")
+    suspend fun getAllAbsensi(
+        @Header("Authorization") token: String,
+        @Query("tanggal") tanggal: String? = null,
+        @Query("mahasiswa_id") mahasiswaId: Int? = null
+    ): Response<ApiResponse<List<AbsensiData>>>
+
+    @GET("admin/laporan/kehadiran")
+    suspend fun getLaporanKehadiran(
+        @Header("Authorization") token: String,
+        @Query("bulan") bulan: Int? = null,
+        @Query("tahun") tahun: Int? = null
+    ): Response<ApiResponse<List<LaporanKehadiranData>>>
+
+    @GET("admin/pengajuan/pending")
+    suspend fun getPengajuanPending(
+        @Header("Authorization") token: String
+    ): Response<ApiResponse<List<PengajuanData>>>
 }

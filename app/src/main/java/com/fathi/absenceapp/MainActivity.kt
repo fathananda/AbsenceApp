@@ -36,10 +36,13 @@ fun AbsensiApp() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState(initial = false)
+    val isAdmin by authViewModel.isAdmin.collectAsState(initial = false)
 
     NavHost(
         navController = navController,
-        startDestination = if (isLoggedIn) "home" else "login"
+        startDestination = if (isLoggedIn) {
+            if (isAdmin) "admin/dashboard" else "home" // TAMBAHAN: route berbeda untuk admin
+        } else "login"
     ) {
         composable("login") {
             LoginScreen(
@@ -124,6 +127,94 @@ fun AbsensiApp() {
 
         composable("tunjangan") {
             TunjanganScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable("admin/dashboard") {
+            AdminDashboardScreen(
+                onNavigateToGuru = {
+                    navController.navigate("admin/guru")
+                },
+                onNavigateToAbsensi = {
+                    navController.navigate("admin/absensi")
+                },
+                onNavigateToLaporan = {
+                    navController.navigate("admin/laporan")
+                },
+                onNavigateToPengajuan = {
+                    navController.navigate("admin/pengajuan")
+                },
+                onNavigateToKalender = {
+                    navController.navigate("admin/kalender")
+                },
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo("admin/dashboard") { inclusive = true }
+                    }
+                },
+                authViewModel = authViewModel
+            )
+        }
+
+        composable("admin/guru") {
+            AdminGuruScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToDetail = { guruId ->
+                    navController.navigate("admin/guru/$guruId")
+                },
+                onNavigateToCreate = {
+                    navController.navigate("admin/guru/create")
+                }
+            )
+        }
+
+        composable("admin/guru/{guruId}") { backStackEntry ->
+            val guruId = backStackEntry.arguments?.getString("guruId")?.toIntOrNull() ?: 0
+            AdminGuruDetailScreen(
+                guruId = guruId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("admin/guru/create"){
+            AdminCreateGuruScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable("admin/absensi") {
+            AdminAbsensiScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("admin/laporan") {
+            AdminLaporanScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("admin/pengajuan") {
+            AdminPengajuanScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("admin/kalender") {
+            AdminKalenderScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }

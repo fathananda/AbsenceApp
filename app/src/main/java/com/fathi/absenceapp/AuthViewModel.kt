@@ -3,6 +3,7 @@ package com.fathi.absenceapp
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -22,6 +23,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val authState: StateFlow<AuthState> = _authState
 
     val isLoggedIn = userPreferences.isLoggedIn
+    val isAdmin = userPreferences.isAdmin
+    val userRole = userPreferences.userRole
+    val userName = userPreferences.userName
 
     fun register(nama: String, nim: String, password: String) {
         viewModelScope.launch {
@@ -63,8 +67,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                             token = "Bearer $token",
                             id = userData.id,
                             nama = userData.nama,
-                            nim = userData.nim
+                            nim = userData.nim,
+                            role = userData.role ?: "mahasiswa"
                         )
+                        delay(300)
                         _authState.value = AuthState.Success("Login berhasil!")
                     } else {
                         _authState.value = AuthState.Error("Data user tidak lengkap")
