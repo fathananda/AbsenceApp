@@ -63,6 +63,43 @@ class KalenderViewModel(application: Application) : AndroidViewModel(application
             }
         }
     }
+
+    fun tambahEvent(tanggal: String, jenis: String, keterangan: String?) {
+        viewModelScope.launch {
+            try {
+                val token = userPreferences.token.first() ?: ""
+                val request = KalenderRequest(tanggal, jenis, keterangan)
+
+                val response = RetrofitClient.apiService.tambahKalender(token, request)
+
+                if (response.isSuccessful) {
+                    loadKalender()  // refresh otomatis
+                } else {
+                    _kalenderState.value = KalenderState.Error("Gagal menambah event")
+                }
+            } catch (e: Exception) {
+                _kalenderState.value = KalenderState.Error("Error: ${e.message}")
+            }
+        }
+    }
+
+    fun hapusEvent(id: Int) {
+        viewModelScope.launch {
+            try {
+                val token = userPreferences.token.first() ?: ""
+                val response = RetrofitClient.apiService.hapusKalender(token, id)
+
+                if (response.isSuccessful) {
+                    loadKalender() // refresh otomatis
+                } else {
+                    _kalenderState.value = KalenderState.Error("Gagal menghapus event")
+                }
+            } catch (e: Exception) {
+                _kalenderState.value = KalenderState.Error("Error: ${e.message}")
+            }
+        }
+    }
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

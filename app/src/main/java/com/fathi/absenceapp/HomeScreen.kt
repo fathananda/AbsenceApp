@@ -54,6 +54,8 @@ fun HomeScreen(
     var showJamDialog by remember { mutableStateOf(false) }
     var jarakDariKantor by remember { mutableStateOf<Double?>(null) }
     var lokasiValid by remember { mutableStateOf(true) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
 
     val locationPermissionState = rememberMultiplePermissionsState(
         permissions = listOf(
@@ -125,8 +127,7 @@ fun HomeScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        authViewModel.logout()
-                        onLogout()
+                        showLogoutDialog = true
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, "Logout")
                     }
@@ -557,6 +558,28 @@ fun HomeScreen(
             )
         }
     }
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Konfirmasi Logout") },
+            text = { Text("Yakin ingin logout dari aplikasi?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    authViewModel.logout()
+                    onLogout()
+                }) {
+                    Text("Ya")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Tidak")
+                }
+            }
+        )
+    }
+
 }
 
 @Composable

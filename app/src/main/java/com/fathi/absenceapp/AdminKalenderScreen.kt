@@ -153,12 +153,36 @@ fun AdminKalenderScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(data) { event ->
+                                var showDeleteDialog by remember { mutableStateOf(false) }
                                 AdminKalenderItemCard(
                                     event = event,
                                     onDelete = {
-                                        // Handle delete
+                                        showDeleteDialog = true
                                     }
                                 )
+
+                                if (showDeleteDialog) {
+                                    AlertDialog(
+                                        onDismissRequest = { showDeleteDialog = false },
+                                        title = { Text("Hapus Event") },
+                                        text = { Text("Yakin ingin menghapus event ini?") },
+                                        confirmButton = {
+                                            TextButton(
+                                                onClick = {
+                                                    kalenderViewModel.hapusEvent(event.id)
+                                                    showDeleteDialog = false
+                                                }
+                                            ) {
+                                                Text("Ya")
+                                            }
+                                        },
+                                        dismissButton = {
+                                            TextButton(onClick = { showDeleteDialog = false }) {
+                                                Text("Tidak")
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -191,7 +215,7 @@ fun AdminKalenderScreen(
             AddKalenderDialog(
                 onDismiss = { showAddDialog = false },
                 onConfirm = { tanggal, jenis, keterangan ->
-                    // Handle add event
+                    kalenderViewModel.tambahEvent(tanggal, jenis, keterangan)
                     showAddDialog = false
                 }
             )
