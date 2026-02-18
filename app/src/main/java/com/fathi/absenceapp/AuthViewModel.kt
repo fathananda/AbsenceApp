@@ -26,7 +26,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val isAdmin = userPreferences.isAdmin
     val userRole = userPreferences.userRole
     val userName = userPreferences.userName
-    val userEmail   = userPreferences.userEmail
+    val userEmail = userPreferences.userEmail
 
     fun register(nama: String, email: String, password: String, nip: String? = null) {
         viewModelScope.launch {
@@ -66,7 +66,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     val userData = body.data
 
                     if (userData != null) {
-                        val role = userData.role ?: "mahasiswa"
+                        val role = userData.role ?: "guru"
                         userPreferences.saveUserData(
                             token = "Bearer $token",
                             id = userData.id,

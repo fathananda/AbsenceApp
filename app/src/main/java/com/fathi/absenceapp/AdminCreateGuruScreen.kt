@@ -129,14 +129,14 @@ fun AdminCreateGuruScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("NIP") },
-                placeholder = { Text("Masukkan NIP") },
+                label = { Text("Email") },
+                placeholder = { Text("Masukkan Email") },
                 leadingIcon = {
                     Icon(Icons.Default.Email, contentDescription = null)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 
             OutlinedTextField(

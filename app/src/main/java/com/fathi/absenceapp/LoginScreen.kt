@@ -101,12 +101,6 @@ fun LoginScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Text(
-                    text = "Masuk dengan email Anda",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
                 Spacer(modifier = Modifier.height(40.dp))
 
                 OutlinedTextField(

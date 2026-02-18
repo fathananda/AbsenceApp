@@ -41,13 +41,13 @@ class PengajuanViewModel(application: Application) : AndroidViewModel(applicatio
 
     val userId = userPreferences.userId
 
-    fun loadPengajuan(mahasiswaId: Int) {
+    fun loadPengajuan(guruId: Int) {
         viewModelScope.launch {
             try {
                 _pengajuanState.value = PengajuanState.Loading
 
                 val token = userPreferences.token.first() ?: ""
-                val response = RetrofitClient.apiService.getPengajuan(token, mahasiswaId = mahasiswaId)
+                val response = RetrofitClient.apiService.getPengajuan(token, guruId = guruId)
 
                 if (response.isSuccessful && response.body() != null) {
                     val data = response.body()!!.data ?: emptyList()
@@ -358,7 +358,6 @@ fun PengajuanItemModern(pengajuan: PengajuanData) {
                 }
             }
 
-            // Keterangan
             if (pengajuan.keterangan != null && pengajuan.keterangan.isNotBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Surface(
@@ -385,7 +384,6 @@ fun PengajuanItemModern(pengajuan: PengajuanData) {
                 }
             }
 
-            // Alasan Ditolak
             if (pengajuan.alasanDitolak != null && pengajuan.alasanDitolak.isNotBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Surface(

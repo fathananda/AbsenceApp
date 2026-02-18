@@ -51,7 +51,6 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
     private val userPreferences = UserPreferences(application)
     private val context = application
 
-
     private val _absensiState = MutableStateFlow<AbsensiState>(AbsensiState.Idle)
     val absensiState: StateFlow<AbsensiState> = _absensiState
 
@@ -80,14 +79,7 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
             )
         }
 
-        // Lapisan 2: Developer Options – isFromMockProvider tidak selalu dapat diandalkan di API baru,
-        //            periksa apakah ada aplikasi mock location aktif
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12+: isMock property lebih akurat
-            // (Sudah tercakup oleh location.isFromMockProvider di atas)
-        }
-
-        // Lapisan 3: Blacklist aplikasi fake GPS yang umum
+        // Lapisan 2: Blacklist aplikasi fake GPS yang umum
         val fakeGpsPackages = listOf(
             "com.lexa.fakegps",
             "com.incorporateapps.fakegps.fre",
@@ -96,14 +88,13 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
             "com.fly.gps",
             "com.fake.location",
             "com.gps.mock",
-            "com.route4me.routeoptimizer",   // digunakan untuk spoof GPS
+            "com.route4me.routeoptimizer",
             "com.fakegps.mock"
         )
         val packageManager = context.packageManager
         for (pkg in fakeGpsPackages) {
             try {
                 packageManager.getPackageInfo(pkg, PackageManager.GET_ACTIVITIES)
-                // Package ditemukan → aplikasi fake GPS terinstal
                 return FakeGpsResult(
                     isFake     = true,
                     reason     = "Aplikasi fake GPS terdeteksi terinstal di perangkat",
@@ -114,13 +105,10 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
             }
         }
 
-        // Lapisan 4: Validasi akurasi GPS
-        // GPS asli di dalam area sekolah biasanya akurasi 5–30 meter
-        // Fake GPS sering memberikan akurasi sempurna (0–2 meter) atau sangat buruk
+        // Lapisan 3: Validasi akurasi GPS
         if (location.hasAccuracy()) {
             val accuracy = location.accuracy
             if (accuracy < 1.0f) {
-                // Akurasi terlalu sempurna — tidak natural
                 return FakeGpsResult(
                     isFake     = true,
                     reason     = "Akurasi GPS tidak natural (${accuracy}m) — kemungkinan lokasi palsu",
@@ -128,7 +116,6 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
                 )
             }
             if (accuracy > 500.0f) {
-                // Akurasi sangat buruk — sinyal GPS tidak valid
                 return FakeGpsResult(
                     isFake     = true,
                     reason     = "Sinyal GPS tidak valid (akurasi ${accuracy.toInt()}m)",
@@ -136,7 +123,6 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
                 )
             }
         } else {
-            // Tidak ada informasi akurasi — curigai
             return FakeGpsResult(
                 isFake     = true,
                 reason     = "Data akurasi GPS tidak tersedia",
@@ -144,9 +130,8 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
             )
         }
 
-        // Lapisan 5: Kecepatan tidak masuk akal
+        // Lapisan 4: Kecepatan tidak masuk akal
         if (location.hasSpeed() && location.speed > 50f) {
-            // Bergerak > 50 m/s (~180 km/jam) — tidak wajar untuk pejalan kaki / guru
             return FakeGpsResult(
                 isFake     = true,
                 reason     = "Kecepatan pergerakan tidak masuk akal (${location.speed.toInt()} m/s)",
@@ -154,10 +139,9 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
             )
         }
 
-        // Lapisan 6: Altitude anomali
+        // Lapisan 5: Altitude anomali
         if (location.hasAltitude()) {
             val altitude = location.altitude
-            // Altitude tidak wajar untuk sekolah di Indonesia (daratan umumnya 0–3000 mdpl)
             if (altitude < -100 || altitude > 5000) {
                 return FakeGpsResult(
                     isFake     = true,
@@ -170,14 +154,13 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
         return FakeGpsResult(isFake = false, confidence = 0)
     }
 
-
     fun cekAbsenHariIni() {
         viewModelScope.launch {
             try {
                 val token = userPreferences.token.first() ?: ""
-                val mahasiswaId = userPreferences.userId.first() ?: 0
+                val guruId = userPreferences.userId.first() ?: 0
 
-                val response = RetrofitClient.apiService.cekAbsenHariIni(token, mahasiswaId)
+                val response = RetrofitClient.apiService.cekAbsenHariIni(token, guruId)
 
                 if (response.isSuccessful && response.body() != null) {
                     val body = response.body()!!
@@ -227,7 +210,7 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun hitungJarak(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val R = 6371e3 // Radius bumi dalam meter
+        val R = 6371e3
         val φ1 = Math.toRadians(lat1)
         val φ2 = Math.toRadians(lat2)
         val Δφ = Math.toRadians(lat2 - lat1)
@@ -238,7 +221,7 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
                 sin(Δλ / 2) * sin(Δλ / 2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
-        return R * c // Jarak dalam meter
+        return R * c
     }
 
     fun validasiLokasi(latitude: Double, longitude: Double): Pair<Boolean, String> {
@@ -258,11 +241,9 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
         return Pair(valid, pesan)
     }
 
-    // Presensi dengan input jam masuk
     fun presensi(jamMasukAktual: String, latitude: Double, longitude: Double, location: Location? = null) {
         viewModelScope.launch {
             try {
-                // Validasi lokasi terlebih dahulu
                 val (lokasiValid, pesanLokasi) = validasiLokasi(latitude, longitude)
 
                 if (!lokasiValid) {
@@ -271,7 +252,6 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 var isMock = false
-                var mockReason = ""
                 if (location != null) {
                     val fakeResult = deteksiFakeGps(location)
                     if (fakeResult.isFake) {
@@ -279,18 +259,17 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
                         return@launch
                     }
                     isMock = fakeResult.isFake
-                    mockReason = fakeResult.reason
                 }
 
                 _absensiState.value = AbsensiState.Loading
 
                 val token = userPreferences.token.first() ?: ""
-                val mahasiswaId = userPreferences.userId.first() ?: 0
+                val guruId = userPreferences.userId.first() ?: 0
 
                 val response = RetrofitClient.apiService.presensi(
                     token = token,
                     request = PresensiRequest(
-                        mahasiswaId = mahasiswaId,
+                        guruId = guruId,
                         jamMasukAktual = jamMasukAktual,
                         latitude = latitude,
                         longitude = longitude,
@@ -356,9 +335,9 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
                 _riwayatState.value = _riwayatState.value.copy(isLoading = true)
 
                 val token = userPreferences.token.first() ?: ""
-                val mahasiswaId = userPreferences.userId.first() ?: 0
+                val guruId = userPreferences.userId.first() ?: 0
 
-                val response = RetrofitClient.apiService.getRiwayat(token, mahasiswaId)
+                val response = RetrofitClient.apiService.getRiwayat(token, guruId)
 
                 if (response.isSuccessful && response.body() != null) {
                     val data = response.body()!!.data ?: emptyList()
@@ -381,5 +360,4 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
-
 }

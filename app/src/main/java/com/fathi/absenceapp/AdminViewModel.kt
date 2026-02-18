@@ -201,12 +201,12 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Load All Absensi
-    fun loadAllAbsensi(tanggal: String? = null, mahasiswaId: Int? = null) {
+    fun loadAllAbsensi(tanggal: String? = null, guruId: Int? = null) {
         viewModelScope.launch {
             try {
                 _absensiState.value = AdminAbsensiState.Loading
                 val token = userPreferences.token.first() ?: ""
-                val response = RetrofitClient.apiService.getAllAbsensi(token, tanggal, mahasiswaId)
+                val response = RetrofitClient.apiService.getAllAbsensi(token, tanggal, guruId)
 
                 if (response.isSuccessful && response.body() != null) {
                     val data = response.body()!!.data ?: emptyList()

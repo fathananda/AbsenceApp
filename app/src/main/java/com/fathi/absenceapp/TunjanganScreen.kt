@@ -62,13 +62,13 @@ class TunjanganViewModel(application: Application) : AndroidViewModel(applicatio
 
     val userId = userPreferences.userId
 
-    fun loadTunjangan(mahasiswaId: Int, bulan: Int? = null, tahun: Int? = null) {
+    fun loadTunjangan(guruId: Int, bulan: Int? = null, tahun: Int? = null) {
         viewModelScope.launch {
             try {
                 _tunjanganState.value = TunjanganState.Loading
 
                 val token = userPreferences.token.first() ?: ""
-                val response = RetrofitClient.apiService.getTunjangan(token, mahasiswaId, bulan, tahun)
+                val response = RetrofitClient.apiService.getTunjangan(token, guruId, bulan, tahun)
 
                 if (response.isSuccessful && response.body() != null) {
                     val data = response.body()!!.data
@@ -86,13 +86,13 @@ class TunjanganViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun loadRingkasan(mahasiswaId: Int) {
+    fun loadRingkasan(guruId: Int) {
         viewModelScope.launch {
             try {
                 _ringkasanState.value = RingkasanState.Loading
 
                 val token = userPreferences.token.first() ?: ""
-                val response = RetrofitClient.apiService.getRingkasanTunjangan(token, mahasiswaId)
+                val response = RetrofitClient.apiService.getRingkasanTunjangan(token, guruId)
 
                 if (response.isSuccessful && response.body() != null) {
                     val data = response.body()!!.data ?: emptyList()
@@ -261,7 +261,6 @@ private fun DetailView(
     viewModel: TunjanganViewModel
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        // Month Selector
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -440,7 +439,6 @@ fun DetailTunjanganModern(data: TunjanganData) {
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
             Spacer(modifier = Modifier.height(8.dp))
-            // REVISI: keterangan bahwa izin/sakit/dinas tidak dapat tunjangan
             Surface(modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = MaterialTheme.shapes.small) {
@@ -619,7 +617,6 @@ fun KehadiranGridModern(kehadiran: KehadiranDetail) {
         if (kehadiran.dinas > 0)
             KehadiranRowModern("Dinas (disetujui)", kehadiran.dinas, Color(0xFF009688))
 
-        // REVISI: alfa ditampilkan terpisah dengan warna merah
         if (kehadiran.alpa > 0) {
             HorizontalDivider()
             Row(modifier = Modifier.fillMaxWidth(),
@@ -681,7 +678,6 @@ fun RingkasanCardModern(data: TunjanganData) {
                     Text("${data.kehadiran.hadir}/${data.kehadiran.totalHariKerja} hari hadir",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    // REVISI: tampilkan alfa jika ada
                     if (data.kehadiran.alpa > 0) {
                         Text("${data.kehadiran.alpa} hari alfa",
                             style = MaterialTheme.typography.bodySmall, color = Color(0xFFD32F2F))

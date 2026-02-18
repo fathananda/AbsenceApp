@@ -179,7 +179,7 @@ fun RegisterScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
                         keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
+                            keyboardType = KeyboardType.Email,
                             imeAction = ImeAction.Next
                         ),
                         keyboardActions = KeyboardActions(
