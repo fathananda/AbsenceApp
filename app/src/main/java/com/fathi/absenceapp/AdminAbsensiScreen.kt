@@ -253,7 +253,7 @@ fun AdminAbsensiItemCard(absensi: AbsensiData) {
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "NIP: ${absensi.nim ?: "-"}",
+                        text = "NIP: ${absensi.nip ?: "-"}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

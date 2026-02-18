@@ -27,7 +27,7 @@ fun AdminCreateGuruScreen(
     val actionState by adminViewModel.actionState.collectAsState()
 
     var nama by remember { mutableStateOf("") }
-    var nim by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var gajiPokok by remember { mutableStateOf("5690752") }
@@ -127,12 +127,12 @@ fun AdminCreateGuruScreen(
             )
 
             OutlinedTextField(
-                value = nim,
-                onValueChange = { nim = it },
+                value = email,
+                onValueChange = { email = it },
                 label = { Text("NIP") },
                 placeholder = { Text("Masukkan NIP") },
                 leadingIcon = {
-                    Icon(Icons.Default.Badge, contentDescription = null)
+                    Icon(Icons.Default.Email, contentDescription = null)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -192,6 +192,25 @@ fun AdminCreateGuruScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Info, null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Potongan alfa: Rp 100.000/hari (ditetapkan sistem)\n" +
+                                "Potongan telat sedang & berat dikonfigurasi di profil guru.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+
             when (actionState) {
                 is AdminActionState.Loading -> {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -250,7 +269,7 @@ fun AdminCreateGuruScreen(
                     adminViewModel.createGuru(
                         CreateGuruRequest(
                             nama = nama,
-                            nim = nim,
+                            email = email,
                             password = password,
                             gajiPokok = gajiPokok.toDoubleOrNull(),
                             tunjanganHadir = tunjanganHadir.toDoubleOrNull()
@@ -258,7 +277,7 @@ fun AdminCreateGuruScreen(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = nama.isNotBlank() && nim.isNotBlank() && password.isNotBlank() && actionState !is AdminActionState.Loading
+                enabled = nama.isNotBlank() && email.isNotBlank() && password.isNotBlank() && actionState !is AdminActionState.Loading
             ) {
                 Icon(Icons.Default.Save, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))

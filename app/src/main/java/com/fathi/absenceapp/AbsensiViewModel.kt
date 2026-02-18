@@ -1,6 +1,9 @@
 package com.fathi.absenceapp
 
 import android.app.Application
+import android.content.pm.PackageManager
+import android.location.Location
+import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
@@ -18,6 +21,7 @@ sealed class AbsensiState {
     data class Success(val message: String, val data: AbsensiData? = null) : AbsensiState()
     data class Error(val message: String) : AbsensiState()
     data class AlreadyAbsen(val data: AbsensiData) : AbsensiState()
+    data class FakeGpsDetected(val reason: String) : AbsensiState()
 }
 
 data class RiwayatState(
@@ -36,9 +40,17 @@ data class KonfigurasiState(
     val error: String? = null
 )
 
+data class FakeGpsResult(
+    val isFake: Boolean,
+    val reason: String = "",
+    val confidence: Int = 0
+)
+
 class AbsensiViewModel(application: Application) : AndroidViewModel(application) {
 
     private val userPreferences = UserPreferences(application)
+    private val context = application
+
 
     private val _absensiState = MutableStateFlow<AbsensiState>(AbsensiState.Idle)
     val absensiState: StateFlow<AbsensiState> = _absensiState
@@ -55,6 +67,109 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
         loadKonfigurasi()
         cekAbsenHariIni()
     }
+
+    fun deteksiFakeGps(location: Location): FakeGpsResult {
+
+        // Lapisan 1: Mock Provider API (Android native check)
+        @Suppress("DEPRECATION")
+        if (location.isFromMockProvider) {
+            return FakeGpsResult(
+                isFake     = true,
+                reason     = "Terdeteksi sebagai mock location (lokasi palsu)",
+                confidence = 100
+            )
+        }
+
+        // Lapisan 2: Developer Options – isFromMockProvider tidak selalu dapat diandalkan di API baru,
+        //            periksa apakah ada aplikasi mock location aktif
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+: isMock property lebih akurat
+            // (Sudah tercakup oleh location.isFromMockProvider di atas)
+        }
+
+        // Lapisan 3: Blacklist aplikasi fake GPS yang umum
+        val fakeGpsPackages = listOf(
+            "com.lexa.fakegps",
+            "com.incorporateapps.fakegps.fre",
+            "com.blogspot.newapphorizons.fakegps",
+            "com.theappninjas.fakegpsjoystick",
+            "com.fly.gps",
+            "com.fake.location",
+            "com.gps.mock",
+            "com.route4me.routeoptimizer",   // digunakan untuk spoof GPS
+            "com.fakegps.mock"
+        )
+        val packageManager = context.packageManager
+        for (pkg in fakeGpsPackages) {
+            try {
+                packageManager.getPackageInfo(pkg, PackageManager.GET_ACTIVITIES)
+                // Package ditemukan → aplikasi fake GPS terinstal
+                return FakeGpsResult(
+                    isFake     = true,
+                    reason     = "Aplikasi fake GPS terdeteksi terinstal di perangkat",
+                    confidence = 90
+                )
+            } catch (_: PackageManager.NameNotFoundException) {
+                // Tidak ditemukan, lanjut
+            }
+        }
+
+        // Lapisan 4: Validasi akurasi GPS
+        // GPS asli di dalam area sekolah biasanya akurasi 5–30 meter
+        // Fake GPS sering memberikan akurasi sempurna (0–2 meter) atau sangat buruk
+        if (location.hasAccuracy()) {
+            val accuracy = location.accuracy
+            if (accuracy < 1.0f) {
+                // Akurasi terlalu sempurna — tidak natural
+                return FakeGpsResult(
+                    isFake     = true,
+                    reason     = "Akurasi GPS tidak natural (${accuracy}m) — kemungkinan lokasi palsu",
+                    confidence = 75
+                )
+            }
+            if (accuracy > 500.0f) {
+                // Akurasi sangat buruk — sinyal GPS tidak valid
+                return FakeGpsResult(
+                    isFake     = true,
+                    reason     = "Sinyal GPS tidak valid (akurasi ${accuracy.toInt()}m)",
+                    confidence = 60
+                )
+            }
+        } else {
+            // Tidak ada informasi akurasi — curigai
+            return FakeGpsResult(
+                isFake     = true,
+                reason     = "Data akurasi GPS tidak tersedia",
+                confidence = 50
+            )
+        }
+
+        // Lapisan 5: Kecepatan tidak masuk akal
+        if (location.hasSpeed() && location.speed > 50f) {
+            // Bergerak > 50 m/s (~180 km/jam) — tidak wajar untuk pejalan kaki / guru
+            return FakeGpsResult(
+                isFake     = true,
+                reason     = "Kecepatan pergerakan tidak masuk akal (${location.speed.toInt()} m/s)",
+                confidence = 80
+            )
+        }
+
+        // Lapisan 6: Altitude anomali
+        if (location.hasAltitude()) {
+            val altitude = location.altitude
+            // Altitude tidak wajar untuk sekolah di Indonesia (daratan umumnya 0–3000 mdpl)
+            if (altitude < -100 || altitude > 5000) {
+                return FakeGpsResult(
+                    isFake     = true,
+                    reason     = "Altitude tidak valid (${altitude.toInt()} mdpl)",
+                    confidence = 70
+                )
+            }
+        }
+
+        return FakeGpsResult(isFake = false, confidence = 0)
+    }
+
 
     fun cekAbsenHariIni() {
         viewModelScope.launch {
@@ -144,7 +259,7 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // Presensi dengan input jam masuk
-    fun presensi(jamMasukAktual: String, latitude: Double, longitude: Double) {
+    fun presensi(jamMasukAktual: String, latitude: Double, longitude: Double, location: Location? = null) {
         viewModelScope.launch {
             try {
                 // Validasi lokasi terlebih dahulu
@@ -153,6 +268,18 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
                 if (!lokasiValid) {
                     _absensiState.value = AbsensiState.Error(pesanLokasi)
                     return@launch
+                }
+
+                var isMock = false
+                var mockReason = ""
+                if (location != null) {
+                    val fakeResult = deteksiFakeGps(location)
+                    if (fakeResult.isFake) {
+                        _absensiState.value = AbsensiState.FakeGpsDetected(fakeResult.reason)
+                        return@launch
+                    }
+                    isMock = fakeResult.isFake
+                    mockReason = fakeResult.reason
                 }
 
                 _absensiState.value = AbsensiState.Loading
@@ -166,7 +293,9 @@ class AbsensiViewModel(application: Application) : AndroidViewModel(application)
                         mahasiswaId = mahasiswaId,
                         jamMasukAktual = jamMasukAktual,
                         latitude = latitude,
-                        longitude = longitude
+                        longitude = longitude,
+                        isMockLocation = isMock,
+                        gpsAccuracy = location?.accuracy
                     )
                 )
 

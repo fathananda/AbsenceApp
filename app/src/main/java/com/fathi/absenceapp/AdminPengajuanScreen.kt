@@ -358,7 +358,7 @@ fun AdminPengajuanItemCard(
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "NIP: ${pengajuan.nim ?: "-"}",
+                            text = "NIP: ${pengajuan.nip ?: "-"}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

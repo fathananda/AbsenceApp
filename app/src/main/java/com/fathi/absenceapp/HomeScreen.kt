@@ -1,6 +1,7 @@
 package com.fathi.absenceapp
 
 import android.Manifest
+import android.location.Location
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -49,12 +50,13 @@ fun HomeScreen(
     val absensiState by absensiViewModel.absensiState.collectAsState()
     val konfigurasiState by absensiViewModel.konfigurasiState.collectAsState()
 
-    var currentLocation by remember { mutableStateOf(LatLng(-6.200000, 106.816666)) }
-    var jamMasuk by remember { mutableStateOf(absensiViewModel.getCurrentTime()) }
-    var showJamDialog by remember { mutableStateOf(false) }
-    var jarakDariKantor by remember { mutableStateOf<Double?>(null) }
-    var lokasiValid by remember { mutableStateOf(true) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
+    var currentLocation   by remember { mutableStateOf(LatLng(-6.360427, 107.095709)) }
+    var currentLocationObj by remember { mutableStateOf<Location?>(null) }  // REVISI
+    var jamMasuk           by remember { mutableStateOf(absensiViewModel.getCurrentTime()) }
+    var showJamDialog      by remember { mutableStateOf(false) }
+    var jarakDariKantor    by remember { mutableStateOf<Double?>(null) }
+    var lokasiValid        by remember { mutableStateOf(true) }
+    var showLogoutDialog   by remember { mutableStateOf(false) }
 
 
     val locationPermissionState = rememberMultiplePermissionsState(
@@ -77,6 +79,7 @@ fun HomeScreen(
                 fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                     if (location != null) {
                         currentLocation = LatLng(location.latitude, location.longitude)
+                        currentLocationObj = location
                         cameraPositionState.position = CameraPosition.fromLatLngZoom(currentLocation, 15f)
 
                         val jarak = absensiViewModel.hitungJarak(
@@ -111,7 +114,7 @@ fun HomeScreen(
             onDismiss = { showJamDialog = false },
             onConfirm = {
                 showJamDialog = false
-                absensiViewModel.presensi(jamMasuk, currentLocation.latitude, currentLocation.longitude)
+                absensiViewModel.presensi(jamMasuk, currentLocation.latitude, currentLocation.longitude, location = currentLocationObj)
             }
         )
     }

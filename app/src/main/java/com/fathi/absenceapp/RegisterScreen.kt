@@ -16,7 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AppRegistration
-import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -44,7 +44,7 @@ fun RegisterScreen(
     viewModel: AuthViewModel = viewModel()
 ) {
     var nama by remember { mutableStateOf("") }
-    var nim by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -166,12 +166,12 @@ fun RegisterScreen(
                     )
 
                     OutlinedTextField(
-                        value = nim,
-                        onValueChange = { nim = it },
-                        label = { Text("NIM") },
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Badge,
+                                Icons.Default.Email,
                                 contentDescription = null
                             )
                         },
@@ -224,8 +224,8 @@ fun RegisterScreen(
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 focusManager.clearFocus()
-                                if (nama.isNotBlank() && nim.isNotBlank() && password.isNotBlank()) {
-                                    viewModel.register(nama, nim, password)
+                                if (nama.isNotBlank() && email.isNotBlank() && password.isNotBlank()) {
+                                    viewModel.register(nama, email, password)
                                 }
                             }
                         ),
@@ -250,11 +250,11 @@ fun RegisterScreen(
                     )
                 } else {
                     Button(
-                        onClick = { viewModel.register(nama, nim, password) },
+                        onClick = { viewModel.register(nama, email, password) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        enabled = nama.isNotBlank() && nim.isNotBlank() && password.isNotBlank(),
+                        enabled = nama.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,

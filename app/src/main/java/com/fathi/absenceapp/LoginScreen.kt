@@ -30,7 +30,7 @@ fun LoginScreen(
     onLoginSuccess: (Boolean) -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
-    var nim by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -102,7 +102,7 @@ fun LoginScreen(
                 )
 
                 Text(
-                    text = "Masuk ke akun Anda",
+                    text = "Masuk dengan email Anda",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -110,10 +110,10 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(40.dp))
 
                 OutlinedTextField(
-                    value = nim,
-                    onValueChange = { nim = it },
-                    label = { Text("NIP") },
-                    placeholder = { Text("Masukkan NIP") },
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    placeholder = { Text("Masukkan Email") },
                     leadingIcon = {
                         Icon(Icons.Default.Person, contentDescription = null)
                     },
@@ -157,11 +157,11 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
-                    onClick = { viewModel.login(nim, password) },
+                    onClick = { viewModel.login(email, password) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    enabled = nim.isNotBlank() && password.isNotBlank() && authState !is AuthState.Loading,
+                    enabled = email.isNotBlank() && password.isNotBlank() && authState !is AuthState.Loading,
                     shape = MaterialTheme.shapes.large
                 ) {
                     if (authState is AuthState.Loading) {

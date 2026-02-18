@@ -215,7 +215,7 @@ fun GuruItemCard(
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "NIP: ${guru.nim}",
+                            text = "NIP: ${guru.nip}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

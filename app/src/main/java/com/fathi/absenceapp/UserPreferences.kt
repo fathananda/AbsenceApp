@@ -15,17 +15,20 @@ class UserPreferences(private val context: Context) {
         private val TOKEN_KEY = stringPreferencesKey("token")
         private val USER_ID_KEY = intPreferencesKey("user_id")
         private val USER_NAME_KEY = stringPreferencesKey("user_name")
-        private val USER_NIM_KEY = stringPreferencesKey("user_nim")
+        private val USER_EMAIL_KEY   = stringPreferencesKey("user_email")   // REVISI: email
+
+        private val USER_NIP_KEY = stringPreferencesKey("user_nip")
         private val USER_ROLE_KEY = stringPreferencesKey("user_role")
         private val IS_LOGGED_IN_KEY = booleanPreferencesKey("is_logged_in")
     }
 
-    suspend fun saveUserData(token: String, id: Int, nama: String, nim: String, role: String) {
+    suspend fun saveUserData(token: String, id: Int, nama: String, email: String, nip: String? = null, role: String) {
         context.dataStore.edit { preferences ->
             preferences[TOKEN_KEY] = token
             preferences[USER_ID_KEY] = id
             preferences[USER_NAME_KEY] = nama
-            preferences[USER_NIM_KEY] = nim
+            preferences[USER_EMAIL_KEY]   = email
+            if (nip != null) preferences[USER_NIP_KEY] = nip
             preferences[USER_ROLE_KEY] = role
             preferences[IS_LOGGED_IN_KEY] = true
         }
@@ -47,6 +50,15 @@ class UserPreferences(private val context: Context) {
 
     val userName: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[USER_NAME_KEY]
+    }
+
+
+    val userEmail: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[USER_EMAIL_KEY]
+    }
+
+    val userNip: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[USER_NIP_KEY]
     }
 
     val userRole: Flow<String?> = context.dataStore.data.map { preferences -> // TAMBAHAN

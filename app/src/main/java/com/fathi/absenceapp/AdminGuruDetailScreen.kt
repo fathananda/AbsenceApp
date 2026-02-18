@@ -134,8 +134,16 @@ fun AdminGuruDetailScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Email, null, modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(guru.email, style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                                }
+
                                 Text(
-                                    text = "NIP: ${guru.nim}",
+                                    text = "NIP: ${guru.nip}",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                                 )
@@ -392,7 +400,8 @@ fun EditGuruDialog(
     onConfirm: (UpdateGuruRequest) -> Unit
 ) {
     var nama by remember { mutableStateOf(guru.nama) }
-    var nim by remember { mutableStateOf(guru.nim) }
+    var email by remember { mutableStateOf(guru.email) }
+    var nip by remember { mutableStateOf(guru.nip ?: "") }
     var gajiPokok by remember { mutableStateOf(guru.gajiPokok.toString()) }
     var tunjanganHadir by remember { mutableStateOf(guru.tunjanganHadir.toString()) }
     var potonganTelatSedang by remember { mutableStateOf(guru.potonganTelatSedang.toString()) }
@@ -413,9 +422,9 @@ fun EditGuruDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
-                    value = nim,
-                    onValueChange = { nim = it },
-                    label = { Text("NIP") },
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
@@ -446,6 +455,14 @@ fun EditGuruDialog(
                     prefix = { Text("Rp ") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                Surface(modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.small) {
+                    Text("Potongan Alfa: Rp 100.000/hari (ditetapkan sistem, tidak dapat diubah)",
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer)
+                }
             }
         },
         confirmButton = {
@@ -454,7 +471,7 @@ fun EditGuruDialog(
                     onConfirm(
                         UpdateGuruRequest(
                             nama = nama,
-                            nim = nim,
+                            email = email,
                             gajiPokok = gajiPokok.toDoubleOrNull() ?: guru.gajiPokok,
                             tunjanganHadir = tunjanganHadir.toDoubleOrNull() ?: guru.tunjanganHadir,
                             potonganTelatSedang = potonganTelatSedang.toDoubleOrNull() ?: guru.potonganTelatSedang,

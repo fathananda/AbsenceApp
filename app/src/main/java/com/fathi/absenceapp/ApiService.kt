@@ -9,21 +9,15 @@ import okhttp3.RequestBody
 
 data class RegisterRequest(
     val nama: String,
-    val nim: String,
+    val email: String,
     val password: String,
+    val nip: String? = null,
     val role: String? = null
 )
 
 data class LoginRequest(
-    val nim: String,
+    val email: String,
     val password: String
-)
-
-data class AbsenRequest(
-    @SerializedName("mahasiswa_id")
-    val mahasiswaId: Int,
-    val latitude: Double,
-    val longitude: Double
 )
 
 data class PresensiRequest(
@@ -34,13 +28,18 @@ data class PresensiRequest(
     @SerializedName("jam_masuk_aktual")
     val jamMasukAktual: String,
     val latitude: Double,
-    val longitude: Double
+    val longitude: Double,
+    @SerializedName("is_mock_location")     // REVISI: kirim status fake GPS ke server
+    val isMockLocation: Boolean = false,
+    @SerializedName("gps_accuracy")         // REVISI: kirim akurasi GPS
+    val gpsAccuracy: Float? = null
 )
 
 data class MahasiswaData(
     val id: Int,
     val nama: String,
-    val nim: String,
+    val email: String,
+    val nip: String? = null,
     val role: String? = null
 )
 
@@ -61,10 +60,13 @@ data class AbsensiData(
     val latitude: Double,
     val longitude: Double,
     val nama: String? = null,
-    val nim: String? = null,
+    val nip: String? = null,
+    val email: String? = null,
     val status: String? = null,
     @SerializedName("jarak_dari_kantor")
-    val jarakDariKantor: Double? = null
+    val jarakDariKantor: Double? = null,
+    @SerializedName("is_mock_location")     // REVISI: apakah pakai fake GPS
+    val isMockLocation: Boolean? = null
 )
 
 data class KalenderData(
@@ -102,7 +104,8 @@ data class PengajuanData(
     @SerializedName("created_at")
     val createdAt: String,
     val nama: String? = null,
-    val nim: String? = null
+    val nip: String? = null,
+    val email: String? = null
 )
 
 data class ProsesPengajuanRequest(
@@ -192,18 +195,21 @@ data class DashboardData(
 data class GuruData(
     val id: Int,
     val nama: String,
-    val nim: String,
+    val email: String,          // REVISI: email sebagai identifier utama
+    val nip: String? = null,
     val role: String,
     @SerializedName("gaji_pokok") val gajiPokok: Double,
     @SerializedName("tunjangan_hadir") val tunjanganHadir: Double,
     @SerializedName("potongan_telat_sedang") val potonganTelatSedang: Double,
     @SerializedName("potongan_telat_berat") val potonganTelatBerat: Double,
+    @SerializedName("potongan_alfa") val potonganAlfa: Double = 100000.0, // REVISI
     @SerializedName("created_at") val createdAt: String
 )
 
 data class UpdateGuruRequest(
     val nama: String,
-    val nim: String,
+    val email: String,
+    val nip: String? = null,
     @SerializedName("gaji_pokok") val gajiPokok: Double,
     @SerializedName("tunjangan_hadir") val tunjanganHadir: Double,
     @SerializedName("potongan_telat_sedang") val potonganTelatSedang: Double,
@@ -212,7 +218,8 @@ data class UpdateGuruRequest(
 
 data class CreateGuruRequest(
     val nama: String,
-    val nim: String,
+    val email: String,
+    val nip: String? = null,
     val password: String,
     @SerializedName("gaji_pokok") val gajiPokok: Double? = null,
     @SerializedName("tunjangan_hadir") val tunjanganHadir: Double? = null
@@ -221,12 +228,17 @@ data class CreateGuruRequest(
 data class LaporanKehadiranData(
     val id: Int,
     val nama: String,
-    val nim: String,
+    val email: String,
+    val nip: String,
     @SerializedName("total_hadir") val totalHadir: Int,
     @SerializedName("tepat_waktu") val tepatWaktu: Int,
     @SerializedName("telat_ringan") val telatRingan: Int,
     @SerializedName("telat_sedang") val telatSedang: Int,
-    @SerializedName("telat_berat") val telatBerat: Int
+    @SerializedName("telat_berat") val telatBerat: Int,
+    val izin: Int = 0,
+    val sakit: Int = 0,
+    val dinas: Int = 0,
+    val alpa: Int = 0
 )
 
 interface ApiService {
@@ -237,11 +249,6 @@ interface ApiService {
     @POST("login")
     suspend fun login(@Body request: LoginRequest): Response<ApiResponse<MahasiswaData>>
 
-    @POST("absen")
-    suspend fun absen(
-        @Header("Authorization") token: String,
-        @Body request: AbsenRequest
-    ): Response<ApiResponse<AbsensiData>>
 
     @POST("presensi")
     suspend fun presensi(

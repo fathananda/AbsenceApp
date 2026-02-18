@@ -26,14 +26,17 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val isAdmin = userPreferences.isAdmin
     val userRole = userPreferences.userRole
     val userName = userPreferences.userName
+    val userEmail   = userPreferences.userEmail
 
-    fun register(nama: String, nim: String, password: String) {
+    fun register(nama: String, email: String, password: String, nip: String? = null) {
         viewModelScope.launch {
             try {
                 _authState.value = AuthState.Loading
 
                 val response = RetrofitClient.apiService.register(
-                    RegisterRequest(nama, nim, password)
+                    RegisterRequest(
+                        nama = nama, email = email, password = password, nip = nip
+                    )
                 )
 
                 if (response.isSuccessful) {
@@ -48,13 +51,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun login(nim: String, password: String) {
+    fun login(email: String, password: String) {
         viewModelScope.launch {
             try {
                 _authState.value = AuthState.Loading
 
                 val response = RetrofitClient.apiService.login(
-                    LoginRequest(nim, password)
+                    LoginRequest(email = email, password = password)
                 )
 
                 if (response.isSuccessful && response.body() != null) {
@@ -68,7 +71,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                             token = "Bearer $token",
                             id = userData.id,
                             nama = userData.nama,
-                            nim = userData.nim,
+                            email = userData.email,
                             role = role
                         )
                         delay(500)

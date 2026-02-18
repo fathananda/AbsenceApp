@@ -222,7 +222,7 @@ fun LaporanKehadiranCard(laporan: LaporanKehadiranData) {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "NIP: ${laporan.nim}",
+                        text = "NIP: ${laporan.nip}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -246,38 +246,57 @@ fun LaporanKehadiranCard(laporan: LaporanKehadiranData) {
             HorizontalDivider()
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                KehadiranStatChip(
-                    label = "Tepat Waktu",
-                    value = laporan.tepatWaktu,
-                    color = Color(0xFF4CAF50)
-                )
-                KehadiranStatChip(
-                    label = "Telat Ringan",
-                    value = laporan.telatRingan,
-                    color = Color(0xFFFFA726)
-                )
+            // Baris 1: Tepat Waktu & Telat Ringan
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                KehadiranStatChip("Tepat Waktu", laporan.tepatWaktu, Color(0xFF4CAF50))
+                KehadiranStatChip("Telat Ringan", laporan.telatRingan, Color(0xFFFFA726))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Baris 2: Telat Sedang & Telat Berat
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                KehadiranStatChip("Telat Sedang", laporan.telatSedang, Color(0xFFFF7043))
+                KehadiranStatChip("Telat Berat",  laporan.telatBerat,  Color(0xFFEF5350))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // REVISI: Baris 3: Izin, Sakit, Dinas
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                KehadiranStatChip("Izin",  laporan.izin,  Color(0xFF9C27B0))
+                KehadiranStatChip("Sakit", laporan.sakit, Color(0xFF2196F3))
+                KehadiranStatChip("Dinas", laporan.dinas, Color(0xFF009688))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                KehadiranStatChip(
-                    label = "Telat Sedang",
-                    value = laporan.telatSedang,
-                    color = Color(0xFFFF7043)
-                )
-                KehadiranStatChip(
-                    label = "Telat Berat",
-                    value = laporan.telatBerat,
-                    color = Color(0xFFEF5350)
-                )
+            // REVISI: Baris 4: Alfa (tidak hadir tanpa keterangan) – highlight merah
+            if (laporan.alpa > 0) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = MaterialTheme.shapes.small,
+                    color    = Color(0xFFFFEBEE)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Warning, null,
+                            tint = Color(0xFFEF5350), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Alfa (tidak hadir tanpa keterangan): ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFD32F2F))
+                        Text("${laporan.alpa} hari",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFD32F2F))
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text("- ${formatRupiah((laporan.alpa * 100_000).toDouble())}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFD32F2F))
+                    }
+                }
             }
         }
     }

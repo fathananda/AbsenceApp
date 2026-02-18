@@ -435,18 +435,23 @@ fun DetailTunjanganModern(data: TunjanganData) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        SectionCardModern(
-            title = "Tunjangan",
-            subtitle = data.tunjangan.detail,
-            icon = Icons.Default.Add,
-            iconColor = Color(0xFF4CAF50)
-        ) {
-            Text(
-                text = formatRupiah(data.tunjangan.tunjanganHadir),
+        SectionCardModern("Tunjangan Hadir", data.tunjangan.detail, Icons.Default.Add, Color(0xFF4CAF50)) {
+            Text(formatRupiah(data.tunjangan.tunjanganHadir),
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF4CAF50)
-            )
+                fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
+            Spacer(modifier = Modifier.height(8.dp))
+            // REVISI: keterangan bahwa izin/sakit/dinas tidak dapat tunjangan
+            Surface(modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.small) {
+                Text(
+                    "ⓘ Izin, sakit, dan dinas tidak mendapat tunjangan hadir. " +
+                            "Dinas dengan persetujuan admin dihitung sebagai hadir.",
+                    modifier = Modifier.padding(10.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         if (data.potongan.total > 0) {
@@ -599,22 +604,42 @@ fun SectionCardModern(
 @Composable
 fun KehadiranGridModern(kehadiran: KehadiranDetail) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        KehadiranRowModern("Hadir", kehadiran.hadir, Color(0xFF2196F3))
-        KehadiranRowModern("Tepat Waktu", kehadiran.tepatWaktu, Color(0xFF4CAF50))
+        KehadiranRowModern("Hadir",       kehadiran.hadir,       Color(0xFF2196F3))
+        KehadiranRowModern("Tepat Waktu", kehadiran.tepatWaktu,  Color(0xFF4CAF50))
         if (kehadiran.telatRingan > 0)
             KehadiranRowModern("Telat Ringan", kehadiran.telatRingan, Color(0xFFFF9800))
         if (kehadiran.telatSedang > 0)
             KehadiranRowModern("Telat Sedang", kehadiran.telatSedang, Color(0xFFFF5722))
         if (kehadiran.telatBerat > 0)
-            KehadiranRowModern("Telat Berat", kehadiran.telatBerat, Color(0xFFEF5350))
+            KehadiranRowModern("Telat Berat",  kehadiran.telatBerat,  Color(0xFFEF5350))
         if (kehadiran.izin > 0)
-            KehadiranRowModern("Izin", kehadiran.izin, Color(0xFF9C27B0))
+            KehadiranRowModern("Izin (disetujui)",  kehadiran.izin,  Color(0xFF9C27B0))
         if (kehadiran.sakit > 0)
-            KehadiranRowModern("Sakit", kehadiran.sakit, Color(0xFF9C27B0))
+            KehadiranRowModern("Sakit (disetujui)", kehadiran.sakit, Color(0xFF2196F3))
         if (kehadiran.dinas > 0)
-            KehadiranRowModern("Dinas", kehadiran.dinas, Color(0xFF9C27B0))
-        if (kehadiran.alpa > 0)
-            KehadiranRowModern("Alpa", kehadiran.alpa, Color(0xFFEF5350))
+            KehadiranRowModern("Dinas (disetujui)", kehadiran.dinas, Color(0xFF009688))
+
+        // REVISI: alfa ditampilkan terpisah dengan warna merah
+        if (kehadiran.alpa > 0) {
+            HorizontalDivider()
+            Row(modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, null, tint = Color(0xFFEF5350),
+                        modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Alfa (no ket.)", style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                }
+                Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFFFEBEE)) {
+                    Text("${kehadiran.alpa} hari – potongan ${formatRupiah((kehadiran.alpa * 100_000).toDouble())}",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
+                }
+            }
+        }
     }
 }
 
@@ -646,50 +671,30 @@ fun KehadiranRowModern(label: String, value: Int, color: Color) {
 
 @Composable
 fun RingkasanCardModern(data: TunjanganData) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 Column {
-                    Text(
-                        text = data.periode,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${data.kehadiran.hadir}/${data.kehadiran.totalHariKerja} hari hadir",
+                    Text(data.periode, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("${data.kehadiran.hadir}/${data.kehadiran.totalHariKerja} hari hadir",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // REVISI: tampilkan alfa jika ada
+                    if (data.kehadiran.alpa > 0) {
+                        Text("${data.kehadiran.alpa} hari alfa",
+                            style = MaterialTheme.typography.bodySmall, color = Color(0xFFD32F2F))
+                    }
                 }
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    modifier = Modifier.size(48.dp)
-                ) {
+                Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.tertiaryContainer,
+                    modifier = Modifier.size(48.dp)) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.CalendarMonth,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
+                        Icon(Icons.Default.CalendarMonth, null,
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer)
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(20.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(20.dp))
@@ -701,27 +706,14 @@ fun RingkasanCardModern(data: TunjanganData) {
                 Spacer(Modifier.height(12.dp))
                 SalaryRow("Potongan", "- ${formatRupiah(data.totalPotongan)}", Color(0xFFEF5350))
             }
-
             Spacer(modifier = Modifier.height(20.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(20.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Gaji Bersih",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = formatRupiah(data.gajiBersih),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            Row(modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Gaji Bersih", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(formatRupiah(data.gajiBersih), style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
