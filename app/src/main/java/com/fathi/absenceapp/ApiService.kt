@@ -72,7 +72,7 @@ data class AbsensiData(
     @SerializedName("jarak_dari_kantor")
     val jarakDariKantor: Double? = null,
     @SerializedName("is_mock_location")
-    val isMockLocation: Boolean? = null
+    val isMockLocation: Int? = null
 )
 
 data class KalenderData(

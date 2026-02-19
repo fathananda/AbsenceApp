@@ -37,6 +37,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+
+fun generateRandomNip(): String {
+    return (1000000..9999999).random().toString()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
@@ -47,6 +52,8 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    val nip by remember { mutableStateOf(generateRandomNip()) }
+
 
     val authState by viewModel.authState.collectAsState()
     val focusManager = LocalFocusManager.current

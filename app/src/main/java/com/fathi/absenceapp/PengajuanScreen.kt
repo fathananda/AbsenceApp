@@ -423,21 +423,46 @@ fun PengajuanItemModern(pengajuan: PengajuanData) {
 
 fun formatDateRange(startDate: String, endDate: String): String {
     return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val outputFormat = SimpleDateFormat("dd MMM", Locale("id", "ID"))
-        val start = inputFormat.parse(startDate)
-        val end = inputFormat.parse(endDate)
+        val start = parseFlexibleDate(startDate)
+        val end = parseFlexibleDate(endDate)
         "${outputFormat.format(start ?: Date())} - ${outputFormat.format(end ?: Date())}"
     } catch (_: Exception) {
         "$startDate - $endDate"
     }
 }
 
+/**
+ * Parse tanggal dari berbagai format yang mungkin dikembalikan server.
+ * Server bisa mengembalikan "yyyy-MM-dd" atau full ISO "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+ */
+fun parseFlexibleDate(dateString: String): Date? {
+    if (dateString.isBlank()) return null
+    val formats = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss",
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd"
+    )
+    for (fmt in formats) {
+        try {
+            return SimpleDateFormat(fmt, Locale.getDefault()).parse(dateString)
+        } catch (_: Exception) {
+            // coba format berikutnya
+        }
+    }
+    return null
+}
+
+/**
+ * Format tanggal ke "dd MMM yyyy" — handle format ISO maupun date-only dari server.
+ */
 fun formatDate(dateString: String): String {
+    if (dateString.isBlank()) return dateString
     return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val date = parseFlexibleDate(dateString)
         val outputFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
-        val date = inputFormat.parse(dateString)
         outputFormat.format(date ?: Date())
     } catch (_: Exception) {
         dateString

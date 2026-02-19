@@ -53,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -442,14 +441,21 @@ fun DetailRowModern(
     }
 }
 
-fun formatTime(dateString: String?): String {
+
+
+/**
+ * Ambil bagian waktu (HH:mm:ss) dari string datetime server.
+ */
+fun formatTimeFromServer(dateString: String?): String {
     if (dateString.isNullOrBlank()) return ""
     return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+        val date = parseFlexibleDate(dateString) ?: return ""
         val outputFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        val date = inputFormat.parse(dateString)
-        outputFormat.format(date ?: Date())
+        outputFormat.format(date)
     } catch (_: Exception) {
-        dateString
+        ""
     }
 }
+
+// Alias untuk kompatibilitas dengan fungsi lama yang dipanggil di file lain
+fun formatTime(dateString: String?): String = formatTimeFromServer(dateString)

@@ -18,6 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminCreateGuruScreen(
@@ -30,8 +33,11 @@ fun AdminCreateGuruScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    val nip by remember { mutableStateOf(generateRandomNip()) }
     var gajiPokok by remember { mutableStateOf("5690752") }
     var tunjanganHadir by remember { mutableStateOf("50000") }
+
+
 
     LaunchedEffect(actionState) {
         if (actionState is AdminActionState.Success) {
